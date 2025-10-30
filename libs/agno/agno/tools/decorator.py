@@ -76,6 +76,7 @@ def tool(
     cache_results: bool = False,
     cache_dir: Optional[str] = None,
     cache_ttl: int = 3600,
+    usage_limit: Optional[int] = None,
 ) -> Callable[[F], Function]: ...
 
 
@@ -104,6 +105,7 @@ def tool(*args, **kwargs) -> Union[Function, Callable[[F], Function]]:
         cache_results: bool - If True, enable caching of function results
         cache_dir: Optional[str] - Directory to store cache files
         cache_ttl: int - Time-to-live for cached results in seconds
+        usage_limit: Optional[int] - Maximum number of times this function can be called in a single run. None means unlimited usage
 
     Returns:
         Union[Function, Callable[[F], Function]]: Decorated function or decorator
@@ -141,6 +143,7 @@ def tool(*args, **kwargs) -> Union[Function, Callable[[F], Function]]:
             "cache_results",
             "cache_dir",
             "cache_ttl",
+            "usage_limit",
         }
     )
 
@@ -229,6 +232,7 @@ def tool(*args, **kwargs) -> Union[Function, Callable[[F], Function]]:
             "cache_results": kwargs.get("cache_results", False),
             "cache_dir": kwargs.get("cache_dir"),
             "cache_ttl": kwargs.get("cache_ttl", 3600),
+            "usage_limit": kwargs.get("usage_limit"),
             **{
                 k: v
                 for k, v in kwargs.items()
@@ -241,6 +245,7 @@ def tool(*args, **kwargs) -> Union[Function, Callable[[F], Function]]:
                     "cache_results",
                     "cache_dir",
                     "cache_ttl",
+                    "usage_limit",
                 ]
                 and v is not None
             },

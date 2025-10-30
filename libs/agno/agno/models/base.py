@@ -307,6 +307,7 @@ class Model(ABC):
         tools: Optional[List[Union[Function, dict]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_call_limit: Optional[int] = None,
+        tool_usage_limits: Optional[Dict[str, int]] = None,
         run_response: Optional[RunOutput] = None,
         send_media_to_model: bool = True,
     ) -> ModelResponse:
@@ -339,6 +340,10 @@ class Model(ABC):
         model_response = ModelResponse()
 
         function_call_count = 0
+
+        # Initialize tool usage limits tracking
+        # Create a copy of tool_usage_limits so we can mutate it during streaming
+        remaining_tool_limits: Dict[str, int] = dict(tool_usage_limits) if tool_usage_limits else {}
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
@@ -428,6 +433,20 @@ class Model(ABC):
                 # Add a function call for each successful execution
                 function_call_count += len(function_call_results)
 
+                # Handle tool usage limits
+                if remaining_tool_limits and function_call_results:
+                    for func_call_result in function_call_results:
+                        tool_name = func_call_result.tool_name
+                        if tool_name in remaining_tool_limits:
+                            remaining_tool_limits[tool_name] -= 1
+                            # If tool has reached its limit, remove it from available tools
+                            if remaining_tool_limits[tool_name] <= 0:
+                                # Remove the tool from _tool_dicts
+                                _tool_dicts = [t for t in _tool_dicts if t.get("function", {}).get("name") != tool_name]
+                                # Remove from _functions
+                                if tool_name in _functions:
+                                    del _functions[tool_name]
+
                 # Format and add results to messages
                 self.format_function_call_results(
                     messages=messages, function_call_results=function_call_results, **model_response.extra or {}
@@ -481,6 +500,7 @@ class Model(ABC):
         tools: Optional[List[Union[Function, dict]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_call_limit: Optional[int] = None,
+        tool_usage_limits: Optional[Dict[str, int]] = None,
         send_media_to_model: bool = True,
     ) -> ModelResponse:
         """
@@ -501,10 +521,14 @@ class Model(ABC):
         _log_messages(messages)
         model_response = ModelResponse()
 
+        function_call_count = 0
+
+        # Initialize tool usage limits tracking
+        # Create a copy of tool_usage_limits so we can mutate it during streaming
+        remaining_tool_limits: Dict[str, int] = dict(tool_usage_limits) if tool_usage_limits else {}
+
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
-
-        function_call_count = 0
 
         while True:
             # Get response from model
@@ -588,6 +612,20 @@ class Model(ABC):
 
                 # Add a function call for each successful execution
                 function_call_count += len(function_call_results)
+
+                # Handle tool usage limits
+                if remaining_tool_limits and function_call_results:
+                    for func_call_result in function_call_results:
+                        tool_name = func_call_result.tool_name
+                        if tool_name in remaining_tool_limits:
+                            remaining_tool_limits[tool_name] -= 1
+                            # If tool has reached its limit, remove it from available tools
+                            if remaining_tool_limits[tool_name] <= 0:
+                                # Remove the tool from _tool_dicts
+                                _tool_dicts = [t for t in _tool_dicts if t.get("function", {}).get("name") != tool_name]
+                                # Remove from _functions
+                                if tool_name in _functions:
+                                    del _functions[tool_name]
 
                 # Format and add results to messages
                 self.format_function_call_results(
@@ -850,6 +888,7 @@ class Model(ABC):
         tools: Optional[List[Union[Function, dict]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_call_limit: Optional[int] = None,
+        tool_usage_limits: Optional[Dict[str, int]] = None,
         stream_model_response: bool = True,
         run_response: Optional[RunOutput] = None,
         send_media_to_model: bool = True,
@@ -857,6 +896,10 @@ class Model(ABC):
         """
         Generate a streaming response from the model.
         """
+
+        # Initialize tool usage limits tracking
+        # Create a copy of tool_usage_limits so we can mutate it during streaming
+        remaining_tool_limits: Dict[str, int] = dict(tool_usage_limits) if tool_usage_limits else {}
 
         # Check cache if enabled - capture key BEFORE streaming to avoid mismatch
         cache_key = None
@@ -960,6 +1003,20 @@ class Model(ABC):
                 # Add a function call for each successful execution
                 function_call_count += len(function_call_results)
 
+                # Handle tool usage limits
+                if remaining_tool_limits and function_call_results:
+                    for func_call_result in function_call_results:
+                        tool_name = func_call_result.tool_name
+                        if tool_name in remaining_tool_limits:
+                            remaining_tool_limits[tool_name] -= 1
+                            # If tool has reached its limit, remove it from available tools
+                            if remaining_tool_limits[tool_name] <= 0:
+                                # Remove the tool from _tool_dicts
+                                _tool_dicts = [t for t in _tool_dicts if t.get("function", {}).get("name") != tool_name]
+                                # Remove from _functions
+                                if tool_name in _functions:
+                                    del _functions[tool_name]
+
                 # Format and add results to messages
                 if stream_data and stream_data.extra is not None:
                     self.format_function_call_results(
@@ -1049,6 +1106,7 @@ class Model(ABC):
         tools: Optional[List[Union[Function, dict]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_call_limit: Optional[int] = None,
+        tool_usage_limits: Optional[Dict[str, int]] = None,
         stream_model_response: bool = True,
         run_response: Optional[RunOutput] = None,
         send_media_to_model: bool = True,
@@ -1056,6 +1114,10 @@ class Model(ABC):
         """
         Generate an asynchronous streaming response from the model.
         """
+
+        # Initialize tool usage limits tracking
+        # Create a copy of tool_usage_limits so we can mutate it during streaming
+        remaining_tool_limits: Dict[str, int] = dict(tool_usage_limits) if tool_usage_limits else {}
 
         # Check cache if enabled - capture key BEFORE streaming to avoid mismatch
         cache_key = None
@@ -1157,6 +1219,20 @@ class Model(ABC):
 
                 # Add a function call for each successful execution
                 function_call_count += len(function_call_results)
+
+                # Handle tool usage limits
+                if remaining_tool_limits and function_call_results:
+                    for func_call_result in function_call_results:
+                        tool_name = func_call_result.tool_name
+                        if tool_name in remaining_tool_limits:
+                            remaining_tool_limits[tool_name] -= 1
+                            # If tool has reached its limit, remove it from available tools
+                            if remaining_tool_limits[tool_name] <= 0:
+                                # Remove the tool from _tool_dicts
+                                _tool_dicts = [t for t in _tool_dicts if t.get("function", {}).get("name") != tool_name]
+                                # Remove from _functions
+                                if tool_name in _functions:
+                                    del _functions[tool_name]
 
                 # Format and add results to messages
                 if stream_data and stream_data.extra is not None:
