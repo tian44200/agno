@@ -308,10 +308,7 @@ class Model(ABC):
     ) -> None:
         """Remove a specific tool from available tools."""
         # Remove the tool from tool_dicts
-        exhausted_indices = [
-            i for i, t in enumerate(tool_dicts)
-            if t.get("function", {}).get("name") == tool_name
-        ]
+        exhausted_indices = [i for i, t in enumerate(tool_dicts) if t.get("function", {}).get("name") == tool_name]
         for i in reversed(exhausted_indices):
             tool_dicts.pop(i)
         # Remove from functions
@@ -358,7 +355,6 @@ class Model(ABC):
         model_response = ModelResponse()
 
         function_call_count = 0
-
         remaining_tool_limits: Dict[str, int] = per_tool_call_limits or {}
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
@@ -528,12 +524,9 @@ class Model(ABC):
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
-
-        function_call_count = 0
-        
         remaining_tool_limits: Dict[str, int] = per_tool_call_limits or {}
-        
-        
+        function_call_count = 0
+
         while True:
             # Get response from model
             assistant_message = Message(role=self.assistant_message_role)
@@ -889,9 +882,6 @@ class Model(ABC):
         """
         Generate a streaming response from the model.
         """
-
-        remaining_tool_limits: Dict[str, int] = per_tool_call_limits or {}
-
         # Check cache if enabled - capture key BEFORE streaming to avoid mismatch
         cache_key = None
         if self.cache_response:
@@ -916,7 +906,7 @@ class Model(ABC):
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
-
+        remaining_tool_limits: Dict[str, int] = per_tool_call_limits or {}
         function_call_count = 0
 
         while True:
@@ -1094,9 +1084,6 @@ class Model(ABC):
         """
         Generate an asynchronous streaming response from the model.
         """
-
-        remaining_tool_limits: Dict[str, int] = per_tool_call_limits or {}
-
         # Check cache if enabled - capture key BEFORE streaming to avoid mismatch
         cache_key = None
         if self.cache_response:
@@ -1121,7 +1108,7 @@ class Model(ABC):
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
-
+        remaining_tool_limits: Dict[str, int] = per_tool_call_limits or {}
         function_call_count = 0
 
         while True:
@@ -1429,12 +1416,14 @@ class Model(ABC):
             **kwargs,  # type: ignore
         )
 
-    def create_tool_call_limit_error_result(self, function_call: FunctionCall, is_single_tool_limit: bool = False) -> Message:
+    def create_tool_call_limit_error_result(
+        self, function_call: FunctionCall, is_single_tool_limit: bool = False
+    ) -> Message:
         if is_single_tool_limit:
             content = f"Tool call limit reached for {function_call.function.name}. Tool call not executed. Don't try to execute it again."
         else:
             content = f"Tool call limit reached. Tool call {function_call.function.name} not executed. Don't try to execute it again."
-        
+
         return Message(
             role=self.tool_message_role,
             content=content,
@@ -1595,7 +1584,9 @@ class Model(ABC):
             # Check if single tool has exceeded its call limit
             if remaining_tool_limits and fc.function.name in remaining_tool_limits:
                 if remaining_tool_limits[fc.function.name] <= 0:
-                    function_call_results.append(self.create_tool_call_limit_error_result(fc, is_single_tool_limit=True))
+                    function_call_results.append(
+                        self.create_tool_call_limit_error_result(fc, is_single_tool_limit=True)
+                    )
                     continue
                 remaining_tool_limits[fc.function.name] -= 1
                 # If tool has reached its limit, remove it from available tools
@@ -1750,17 +1741,19 @@ class Model(ABC):
                     function_call_results.append(self.create_tool_call_limit_error_result(fc))
                     # Skip this function call
                     continue
-            
+
             # Check if single tool has exceeded its call limit
             if remaining_tool_limits and fc.function.name in remaining_tool_limits:
                 if remaining_tool_limits[fc.function.name] <= 0:
-                    function_call_results.append(self.create_tool_call_limit_error_result(fc, is_single_tool_limit=True))
+                    function_call_results.append(
+                        self.create_tool_call_limit_error_result(fc, is_single_tool_limit=True)
+                    )
                     continue
                 remaining_tool_limits[fc.function.name] -= 1
                 # If tool has reached its limit, remove it from available tools
                 if remaining_tool_limits[fc.function.name] <= 0 and tool_dicts is not None and functions is not None:
                     self._remove_tool_by_name(fc.function.name, tool_dicts, functions)
-            
+
             function_calls_to_run.append(fc)
 
         # Yield tool_call_started events for all function calls or pause them
