@@ -188,8 +188,6 @@ class Agent:
     cache_session: bool = False
 
     search_session_history: Optional[bool] = False
-    # Usage limit for search_session_history tool (None = unlimited)
-    search_session_history_usage_limit: Optional[int] = None
     num_history_sessions: Optional[int] = None
     # If True, the agent creates/updates session summaries at the end of runs
     enable_session_summaries: bool = False
@@ -279,8 +277,6 @@ class Agent:
     # --- Default tools ---
     # Add a tool that allows the Model to read the chat history.
     read_chat_history: bool = False
-    # Usage limit for read_chat_history tool (None = unlimited)
-    read_chat_history_usage_limit: Optional[int] = None
     # Add a tool that allows the Model to search the knowledge base (aka Agentic RAG)
     # Added only if knowledge is provided.
     search_knowledge: bool = True
@@ -288,12 +284,8 @@ class Agent:
     search_knowledge_usage_limit: Optional[int] = None
     # Add a tool that allows the Agent to update Knowledge.
     update_knowledge: bool = False
-    # Usage limit for update_knowledge tool (None = unlimited)
-    update_knowledge_usage_limit: Optional[int] = None
     # Add a tool that allows the Model to get the tool call history.
     read_tool_call_history: bool = False
-    # Usage limit for read_tool_call_history tool (None = unlimited)
-    read_tool_call_history_usage_limit: Optional[int] = None
     # If False, media (images, videos, audio, files) is only available to tools and not sent to the LLM
     send_media_to_model: bool = True
     # If True, store media in run output
@@ -438,7 +430,6 @@ class Agent:
         enable_agentic_state: bool = False,
         cache_session: bool = False,
         search_session_history: Optional[bool] = False,
-        search_session_history_usage_limit: Optional[int] = None,
         num_history_sessions: Optional[int] = None,
         dependencies: Optional[Dict[str, Any]] = None,
         add_dependencies_to_context: bool = False,
@@ -476,13 +467,10 @@ class Agent:
         reasoning_min_steps: int = 1,
         reasoning_max_steps: int = 10,
         read_chat_history: bool = False,
-        read_chat_history_usage_limit: Optional[int] = None,
         search_knowledge: bool = True,
         search_knowledge_usage_limit: Optional[int] = None,
         update_knowledge: bool = False,
-        update_knowledge_usage_limit: Optional[int] = None,
         read_tool_call_history: bool = False,
-        read_tool_call_history_usage_limit: Optional[int] = None,
         send_media_to_model: bool = True,
         system_message: Optional[Union[str, Callable, Message]] = None,
         system_message_role: str = "system",
@@ -540,7 +528,6 @@ class Agent:
         self.cache_session = cache_session
 
         self.search_session_history = search_session_history
-        self.search_session_history_usage_limit = search_session_history_usage_limit
 
         self.num_history_sessions = num_history_sessions
 
@@ -601,13 +588,10 @@ class Agent:
         self.reasoning_max_steps = reasoning_max_steps
 
         self.read_chat_history = read_chat_history
-        self.read_chat_history_usage_limit = read_chat_history_usage_limit
         self.search_knowledge = search_knowledge
         self.search_knowledge_usage_limit = search_knowledge_usage_limit
         self.update_knowledge = update_knowledge
-        self.update_knowledge_usage_limit = update_knowledge_usage_limit
         self.read_tool_call_history = read_tool_call_history
-        self.read_tool_call_history_usage_limit = read_tool_call_history_usage_limit
         self.send_media_to_model = send_media_to_model
         self.system_message = system_message
         self.system_message_role = system_message_role
@@ -5293,20 +5277,14 @@ class Agent:
         # Add tools for accessing memory
         if self.read_chat_history:
             chat_history_func = self._get_chat_history_function(session=session)
-            if self.read_chat_history_usage_limit is not None and isinstance(chat_history_func, Function):
-                chat_history_func.usage_limit = self.read_chat_history_usage_limit
             agent_tools.append(chat_history_func)
         if self.read_tool_call_history:
             tool_call_history_func = self._get_tool_call_history_function(session=session)
-            if self.read_tool_call_history_usage_limit is not None and isinstance(tool_call_history_func, Function):
-                tool_call_history_func.usage_limit = self.read_tool_call_history_usage_limit
             agent_tools.append(tool_call_history_func)
         if self.search_session_history:
             session_history_func = self._get_previous_sessions_messages_function(
                 num_history_sessions=self.num_history_sessions, user_id=user_id
             )
-            if self.search_session_history_usage_limit is not None and isinstance(session_history_func, Function):
-                session_history_func.usage_limit = self.search_session_history_usage_limit
             agent_tools.append(session_history_func)
 
         if self.enable_agentic_memory:
@@ -5350,8 +5328,6 @@ class Agent:
 
             if self.update_knowledge:
                 update_knowledge_func = Function.from_callable(self.add_to_knowledge, name="add_to_knowledge")
-                if self.update_knowledge_usage_limit is not None:
-                    update_knowledge_func.usage_limit = self.update_knowledge_usage_limit
                 agent_tools.append(update_knowledge_func)
 
         return agent_tools
@@ -5399,20 +5375,14 @@ class Agent:
         # Add tools for accessing memory
         if self.read_chat_history:
             chat_history_func = self._get_chat_history_function(session=session)
-            if self.read_chat_history_usage_limit is not None and isinstance(chat_history_func, Function):
-                chat_history_func.usage_limit = self.read_chat_history_usage_limit
             agent_tools.append(chat_history_func)
         if self.read_tool_call_history:
             tool_call_history_func = self._get_tool_call_history_function(session=session)
-            if self.read_tool_call_history_usage_limit is not None and isinstance(tool_call_history_func, Function):
-                tool_call_history_func.usage_limit = self.read_tool_call_history_usage_limit
             agent_tools.append(tool_call_history_func)
         if self.search_session_history:
             session_history_func = await self._aget_previous_sessions_messages_function(
                 num_history_sessions=self.num_history_sessions, user_id=user_id
             )
-            if self.search_session_history_usage_limit is not None and isinstance(session_history_func, Function):
-                session_history_func.usage_limit = self.search_session_history_usage_limit
             agent_tools.append(session_history_func)
 
         if self.enable_agentic_memory:
@@ -5444,8 +5414,6 @@ class Agent:
 
             if self.update_knowledge:
                 update_knowledge_func = Function.from_callable(self.add_to_knowledge, name="add_to_knowledge")
-                if self.update_knowledge_usage_limit is not None:
-                    update_knowledge_func.usage_limit = self.update_knowledge_usage_limit
                 agent_tools.append(update_knowledge_func)
 
         return agent_tools
