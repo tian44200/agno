@@ -306,7 +306,12 @@ class Model(ABC):
         tool_dicts: List[Dict[str, Any]],
         functions: Dict[str, Function],
     ) -> None:
-        """Remove a specific tool from available tools."""
+        """
+        Remove a tool from available tools after reaching call limit.
+
+        Note: tool_dicts and functions are local variables created per run,
+        direct modification ensures the tool won't appear in the LLM's next response.
+        """
         # Remove the tool from tool_dicts
         exhausted_indices = [i for i, t in enumerate(tool_dicts) if t.get("function", {}).get("name") == tool_name]
         for i in reversed(exhausted_indices):
@@ -1420,7 +1425,7 @@ class Model(ABC):
         self, function_call: FunctionCall, is_single_tool_limit: bool = False
     ) -> Message:
         if is_single_tool_limit:
-            content = f"Tool call limit reached for {function_call.function.name}. Tool call not executed. Don't try to execute it again."
+            content = f"Call limit reached for {function_call.function.name}. Tool not executed. Don't try to execute this tool again."
         else:
             content = f"Tool call limit reached. Tool call {function_call.function.name} not executed. Don't try to execute it again."
 

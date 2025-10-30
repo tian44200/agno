@@ -126,6 +126,39 @@ async def test_per_tool_call_limit_stream_async():
     assert stock_price_calls[0].result is not None
 
 
+def test_multiple_tools_different_call_limits():
+    """Test that different tools can have different call limits and don't interfere with each other."""
+    yfinance_tools = YFinanceTools(cache_results=True)
+
+    # Set call_limit=1 for get_current_stock_price and call_limit=2 for get_stock_info
+    for tool in yfinance_tools.functions.values():
+        if tool.name == "get_current_stock_price":
+            tool.call_limit = 1
+        elif tool.name == "get_company_info":
+            tool.call_limit = 1
+
+    agent = Agent(
+        model=OpenAIChat(id="gpt-4o-mini"),
+        tools=[yfinance_tools],
+        markdown=True,
+        telemetry=False,
+    )
+
+    response = agent.run(
+        "First, get the current stock prices for TSLA and AAPL. After getting the results, get the company info for AAPL and GOOGL."
+    )
+
+    # Verify that get_current_stock_price was called only once due to call_limit=1
+    stock_price_calls = [t for t in (response.tools or []) if t.tool_name == "get_current_stock_price"]
+    assert len(stock_price_calls) == 1, f"Expected 1 get_current_stock_price call, got {len(stock_price_calls)}"
+
+    # Verify that get_stock_info can be called up to 2 times due to call_limit=2
+    stock_info_calls = [t for t in (response.tools or []) if t.tool_name == "get_company_info"]
+    assert len(stock_info_calls) == 1, f"Expected 2 get_company_info calls, got {len(stock_info_calls)}"
+
+    assert response.content is not None
+
+
 # Tests for search_knowledge_call_limit
 
 
@@ -205,4 +238,3 @@ def test_search_knowledge_no_limit(loaded_knowledge_base):
     # When no limit is set, the agent can search multiple times or once depending on the model's decision
     assert len(search_calls) > 1, f"Expected at least 1 search_knowledge_base call, got {len(search_calls)}"
     assert response.content is not None
-
