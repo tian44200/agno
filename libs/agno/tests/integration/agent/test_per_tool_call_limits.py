@@ -37,7 +37,6 @@ def test_per_tool_call_limit():
 
 
 def test_per_tool_call_limit_stream():
-    """Test that per tool call limits work with streaming."""
     yfinance_tools = YFinanceTools(cache_results=True)
 
     for tool in yfinance_tools.functions.values():
@@ -94,7 +93,6 @@ async def test_per_tool_call_limit_async():
 
 @pytest.mark.asyncio
 async def test_per_tool_call_limit_stream_async():
-    """Test that per tool call limits work with async streaming."""
     yfinance_tools = YFinanceTools(cache_results=True)
 
     for tool in yfinance_tools.functions.values():
@@ -191,7 +189,6 @@ def test_search_knowledge_call_limit(loaded_knowledge_base):
 
 @pytest.mark.asyncio
 async def test_search_knowledge_call_limit_async(loaded_knowledge_base):
-    """Test that search_knowledge_call_limit works with async."""
     agent = Agent(
         model=OpenAIChat(id="gpt-4o-mini"),
         knowledge=loaded_knowledge_base,
