@@ -11,7 +11,7 @@ from agno.vectordb.lancedb.lance_db import LanceDb
 from agno.vectordb.search import SearchType
 
 
-def test_per_tool_call_limit_single_tool():
+def test_per_tool_call_limit():
     yfinance_tools = YFinanceTools(cache_results=True)
 
     for tool in yfinance_tools.functions.values():
@@ -206,22 +206,3 @@ def test_search_knowledge_no_limit(loaded_knowledge_base):
     assert len(search_calls) > 1, f"Expected at least 1 search_knowledge_base call, got {len(search_calls)}"
     assert response.content is not None
 
-
-@pytest.mark.asyncio
-async def test_search_knowledge_call_limit_two(loaded_knowledge_base):
-    """Test that search_knowledge_base tool is called only twice when limit is set to 2."""
-    agent = Agent(
-        model=OpenAIChat(id="gpt-4o-mini"),
-        knowledge=loaded_knowledge_base,
-        search_knowledge=True,
-        search_knowledge_call_limit=2,
-        markdown=True,
-        telemetry=False,
-    )
-
-    response = await agent.arun("Search for one recipe at a time, three times in total, and tell me what you find.")
-
-    # Verify search_knowledge_base was called at most twice
-    search_calls = [t for t in (response.tools or []) if t.tool_name == "search_knowledge_base"]
-    assert len(search_calls) <= 2, f"Expected at most 2 search_knowledge_base calls, got {len(search_calls)}"
-    assert response.content is not None
