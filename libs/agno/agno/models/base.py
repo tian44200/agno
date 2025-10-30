@@ -325,7 +325,7 @@ class Model(ABC):
         tools: Optional[List[Union[Function, dict]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_call_limit: Optional[int] = None,
-        tool_usage_limits: Optional[Dict[str, int]] = None,
+        per_tool_call_limits: Optional[Dict[str, int]] = None,
         run_response: Optional[RunOutput] = None,
         send_media_to_model: bool = True,
     ) -> ModelResponse:
@@ -359,7 +359,7 @@ class Model(ABC):
 
         function_call_count = 0
 
-        remaining_tool_limits: Dict[str, int] = tool_usage_limits or {}
+        remaining_tool_limits: Dict[str, int] = per_tool_call_limits or {}
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
@@ -505,7 +505,7 @@ class Model(ABC):
         tools: Optional[List[Union[Function, dict]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_call_limit: Optional[int] = None,
-        tool_usage_limits: Optional[Dict[str, int]] = None,
+        per_tool_call_limits: Optional[Dict[str, int]] = None,
         send_media_to_model: bool = True,
     ) -> ModelResponse:
         """
@@ -531,7 +531,7 @@ class Model(ABC):
 
         function_call_count = 0
         
-        remaining_tool_limits: Dict[str, int] = tool_usage_limits or {}
+        remaining_tool_limits: Dict[str, int] = per_tool_call_limits or {}
         
         
         while True:
@@ -881,7 +881,7 @@ class Model(ABC):
         tools: Optional[List[Union[Function, dict]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_call_limit: Optional[int] = None,
-        tool_usage_limits: Optional[Dict[str, int]] = None,
+        per_tool_call_limits: Optional[Dict[str, int]] = None,
         stream_model_response: bool = True,
         run_response: Optional[RunOutput] = None,
         send_media_to_model: bool = True,
@@ -890,7 +890,7 @@ class Model(ABC):
         Generate a streaming response from the model.
         """
 
-        remaining_tool_limits: Dict[str, int] = tool_usage_limits or {}
+        remaining_tool_limits: Dict[str, int] = per_tool_call_limits or {}
 
         # Check cache if enabled - capture key BEFORE streaming to avoid mismatch
         cache_key = None
@@ -1086,7 +1086,7 @@ class Model(ABC):
         tools: Optional[List[Union[Function, dict]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_call_limit: Optional[int] = None,
-        tool_usage_limits: Optional[Dict[str, int]] = None,
+        per_tool_call_limits: Optional[Dict[str, int]] = None,
         stream_model_response: bool = True,
         run_response: Optional[RunOutput] = None,
         send_media_to_model: bool = True,
@@ -1095,8 +1095,7 @@ class Model(ABC):
         Generate an asynchronous streaming response from the model.
         """
 
-        # Initialize tool usage limits tracking
-        remaining_tool_limits: Dict[str, int] = tool_usage_limits or {}
+        remaining_tool_limits: Dict[str, int] = per_tool_call_limits or {}
 
         # Check cache if enabled - capture key BEFORE streaming to avoid mismatch
         cache_key = None
@@ -1593,7 +1592,7 @@ class Model(ABC):
                     function_call_results.append(self.create_tool_call_limit_error_result(fc))
                     continue
 
-            # Check if single tool has exceeded its usage limit
+            # Check if single tool has exceeded its call limit
             if remaining_tool_limits and fc.function.name in remaining_tool_limits:
                 if remaining_tool_limits[fc.function.name] <= 0:
                     function_call_results.append(self.create_tool_call_limit_error_result(fc, is_single_tool_limit=True))
@@ -1752,7 +1751,7 @@ class Model(ABC):
                     # Skip this function call
                     continue
             
-            # Check if single tool has exceeded its usage limit
+            # Check if single tool has exceeded its call limit
             if remaining_tool_limits and fc.function.name in remaining_tool_limits:
                 if remaining_tool_limits[fc.function.name] <= 0:
                     function_call_results.append(self.create_tool_call_limit_error_result(fc, is_single_tool_limit=True))
