@@ -367,8 +367,7 @@ class Model(ABC):
         function_call_count = 0
 
         # Initialize tool usage limits tracking
-        # Create a copy of tool_usage_limits so we can mutate it during streaming
-        remaining_tool_limits: Dict[str, int] = dict(tool_usage_limits) if tool_usage_limits else {}
+        remaining_tool_limits: Dict[str, int] = tool_usage_limits or {}
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
@@ -544,8 +543,7 @@ class Model(ABC):
         function_call_count = 0
 
         # Initialize tool usage limits tracking
-        # Create a copy of tool_usage_limits so we can mutate it during streaming
-        remaining_tool_limits: Dict[str, int] = dict(tool_usage_limits) if tool_usage_limits else {}
+        remaining_tool_limits: Dict[str, int] = tool_usage_limits or {}
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
@@ -913,8 +911,7 @@ class Model(ABC):
         """
 
         # Initialize tool usage limits tracking
-        # Create a copy of tool_usage_limits so we can mutate it during streaming
-        remaining_tool_limits: Dict[str, int] = dict(tool_usage_limits) if tool_usage_limits else {}
+        remaining_tool_limits: Dict[str, int] = tool_usage_limits or {}
 
         # Check cache if enabled - capture key BEFORE streaming to avoid mismatch
         cache_key = None
@@ -1126,8 +1123,7 @@ class Model(ABC):
         """
 
         # Initialize tool usage limits tracking
-        # Create a copy of tool_usage_limits so we can mutate it during streaming
-        remaining_tool_limits: Dict[str, int] = dict(tool_usage_limits) if tool_usage_limits else {}
+        remaining_tool_limits: Dict[str, int] = tool_usage_limits or {}
 
         # Check cache if enabled - capture key BEFORE streaming to avoid mismatch
         cache_key = None
