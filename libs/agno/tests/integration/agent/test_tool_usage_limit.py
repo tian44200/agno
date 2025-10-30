@@ -7,11 +7,8 @@ from agno.tools.yfinance import YFinanceTools
 
 
 def test_tool_usage_limit_single_tool():
-    """Test that a tool with usage_limit=1 is only called once."""
-    # Create YFinanceTools and set usage_limit on specific tools
     yfinance_tools = YFinanceTools(cache_results=True)
 
-    # Set usage_limit on the get_current_stock_price function
     for tool in yfinance_tools.functions.values():
         if tool.name == "get_current_stock_price":
             tool.usage_limit = 1
@@ -24,7 +21,7 @@ def test_tool_usage_limit_single_tool():
         telemetry=False,
     )
 
-    response = agent.run("Find me the current price of TSLA twice. Call it once then later again.")
+    response = agent.run("Find me the current price of TSLA and APPL.")
 
     # Verify that get_current_stock_price was only called once due to usage_limit
     stock_price_calls = [t for t in response.tools if t.tool_name == "get_current_stock_price"]
@@ -53,7 +50,7 @@ def test_tool_usage_limit_stream():
     )
 
     response_stream = agent.run(
-        "Find me the current price of TSLA twice. Call it once then later again.", stream=True, stream_events=True
+        "Find me the current price of TSLA and APPL.", stream=True, stream_events=True
     )
 
     tools = []
@@ -86,7 +83,7 @@ async def test_tool_usage_limit_async():
         telemetry=False,
     )
 
-    response = await agent.arun("Find me the current price of TSLA twice. Call it once then later again.")
+    response = await agent.arun("Find me the current price of TSLA and APPL.")
 
     # Verify that get_current_stock_price was only called once due to usage_limit
     stock_price_calls = [t for t in response.tools if t.tool_name == "get_current_stock_price"]
@@ -117,7 +114,7 @@ async def test_tool_usage_limit_stream_async():
 
     tools = []
     async for chunk in agent.arun(
-        "Find me the current price of TSLA twice. Call it once then later again.", stream=True, stream_events=True
+        "Find me the current price of TSLA and APPL.", stream=True, stream_events=True
     ):
         if chunk.event == RunEvent.tool_call_completed:
             tools.append(chunk.tool)
