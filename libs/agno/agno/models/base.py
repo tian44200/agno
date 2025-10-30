@@ -300,6 +300,31 @@ class Model(ABC):
                 _tool_dicts.append(tool)
         return _tool_dicts
 
+    def _remove_exhausted_tools(
+        self,
+        remaining_tool_limits: Dict[str, int],
+        function_call_results: List[Message],
+        tool_dicts: List[Dict[str, Any]],
+        functions: Dict[str, Function],
+    ) -> None:
+        """Remove tools that have reached their usage limit."""
+        for func_call_result in function_call_results:
+            tool_name = func_call_result.tool_name
+            if tool_name in remaining_tool_limits:
+                remaining_tool_limits[tool_name] -= 1
+                # If tool has reached its limit, remove it from available tools
+                if remaining_tool_limits[tool_name] <= 0:
+                    # Remove the tool from tool_dicts
+                    exhausted_indices = [
+                        i for i, t in enumerate(tool_dicts)
+                        if t.get("function", {}).get("name") == tool_name
+                    ]
+                    for i in reversed(exhausted_indices):
+                        tool_dicts.pop(i)
+                    # Remove from functions
+                    if tool_name in functions:
+                        del functions[tool_name]
+
     def response(
         self,
         messages: List[Message],
@@ -435,17 +460,12 @@ class Model(ABC):
 
                 # Handle tool usage limits
                 if remaining_tool_limits and function_call_results:
-                    for func_call_result in function_call_results:
-                        tool_name = func_call_result.tool_name
-                        if tool_name in remaining_tool_limits:
-                            remaining_tool_limits[tool_name] -= 1
-                            # If tool has reached its limit, remove it from available tools
-                            if remaining_tool_limits[tool_name] <= 0:
-                                # Remove the tool from _tool_dicts
-                                _tool_dicts = [t for t in _tool_dicts if t.get("function", {}).get("name") != tool_name]
-                                # Remove from _functions
-                                if tool_name in _functions:
-                                    del _functions[tool_name]
+                    self._remove_exhausted_tools(
+                        remaining_tool_limits=remaining_tool_limits,
+                        function_call_results=function_call_results,
+                        tool_dicts=_tool_dicts,
+                        functions=_functions,
+                    )
 
                 # Format and add results to messages
                 self.format_function_call_results(
@@ -615,17 +635,12 @@ class Model(ABC):
 
                 # Handle tool usage limits
                 if remaining_tool_limits and function_call_results:
-                    for func_call_result in function_call_results:
-                        tool_name = func_call_result.tool_name
-                        if tool_name in remaining_tool_limits:
-                            remaining_tool_limits[tool_name] -= 1
-                            # If tool has reached its limit, remove it from available tools
-                            if remaining_tool_limits[tool_name] <= 0:
-                                # Remove the tool from _tool_dicts
-                                _tool_dicts = [t for t in _tool_dicts if t.get("function", {}).get("name") != tool_name]
-                                # Remove from _functions
-                                if tool_name in _functions:
-                                    del _functions[tool_name]
+                    self._remove_exhausted_tools(
+                        remaining_tool_limits=remaining_tool_limits,
+                        function_call_results=function_call_results,
+                        tool_dicts=_tool_dicts,
+                        functions=_functions,
+                    )
 
                 # Format and add results to messages
                 self.format_function_call_results(
@@ -1005,17 +1020,12 @@ class Model(ABC):
 
                 # Handle tool usage limits
                 if remaining_tool_limits and function_call_results:
-                    for func_call_result in function_call_results:
-                        tool_name = func_call_result.tool_name
-                        if tool_name in remaining_tool_limits:
-                            remaining_tool_limits[tool_name] -= 1
-                            # If tool has reached its limit, remove it from available tools
-                            if remaining_tool_limits[tool_name] <= 0:
-                                # Remove the tool from _tool_dicts
-                                _tool_dicts = [t for t in _tool_dicts if t.get("function", {}).get("name") != tool_name]
-                                # Remove from _functions
-                                if tool_name in _functions:
-                                    del _functions[tool_name]
+                    self._remove_exhausted_tools(
+                        remaining_tool_limits=remaining_tool_limits,
+                        function_call_results=function_call_results,
+                        tool_dicts=_tool_dicts,
+                        functions=_functions,
+                    )
 
                 # Format and add results to messages
                 if stream_data and stream_data.extra is not None:
@@ -1222,17 +1232,12 @@ class Model(ABC):
 
                 # Handle tool usage limits
                 if remaining_tool_limits and function_call_results:
-                    for func_call_result in function_call_results:
-                        tool_name = func_call_result.tool_name
-                        if tool_name in remaining_tool_limits:
-                            remaining_tool_limits[tool_name] -= 1
-                            # If tool has reached its limit, remove it from available tools
-                            if remaining_tool_limits[tool_name] <= 0:
-                                # Remove the tool from _tool_dicts
-                                _tool_dicts = [t for t in _tool_dicts if t.get("function", {}).get("name") != tool_name]
-                                # Remove from _functions
-                                if tool_name in _functions:
-                                    del _functions[tool_name]
+                    self._remove_exhausted_tools(
+                        remaining_tool_limits=remaining_tool_limits,
+                        function_call_results=function_call_results,
+                        tool_dicts=_tool_dicts,
+                        functions=_functions,
+                    )
 
                 # Format and add results to messages
                 if stream_data and stream_data.extra is not None:

@@ -528,7 +528,6 @@ class Agent:
         self.cache_session = cache_session
 
         self.search_session_history = search_session_history
-
         self.num_history_sessions = num_history_sessions
 
         self.dependencies = dependencies
@@ -5536,14 +5535,6 @@ class Agent:
         return _functions
 
     def _build_tool_usage_limits(self, tools: List[Union[Function, dict]]) -> Dict[str, int]:
-        """Build a dictionary of tool names to their usage limits.
-
-        Args:
-            tools: List of tools to extract usage limits from
-
-        Returns:
-            Dict mapping tool names to their usage limits
-        """
         tool_limits: Dict[str, int] = {}
 
         for tool in tools:
