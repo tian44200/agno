@@ -117,7 +117,7 @@ class Function(BaseModel):
     cache_dir: Optional[str] = None
     cache_ttl: int = 3600
 
-    # Maximum number of times this function can be called in a single run, None means unlimited calls
+    # The maximum number of calls allowed during a single run. None means no limit.
     call_limit: Optional[int] = None
 
     # --*-- FOR INTERNAL USE ONLY --*--
