@@ -300,30 +300,23 @@ class Model(ABC):
                 _tool_dicts.append(tool)
         return _tool_dicts
 
-    def _remove_exhausted_tools(
+    def _remove_tool_by_name(
         self,
-        remaining_tool_limits: Dict[str, int],
-        function_call_results: List[Message],
+        tool_name: str,
         tool_dicts: List[Dict[str, Any]],
         functions: Dict[str, Function],
     ) -> None:
-        """Remove tools that have reached their usage limit."""
-        for func_call_result in function_call_results:
-            tool_name = func_call_result.tool_name
-            if tool_name in remaining_tool_limits:
-                remaining_tool_limits[tool_name] -= 1
-                # If tool has reached its limit, remove it from available tools
-                if remaining_tool_limits[tool_name] <= 0:
-                    # Remove the tool from tool_dicts
-                    exhausted_indices = [
-                        i for i, t in enumerate(tool_dicts)
-                        if t.get("function", {}).get("name") == tool_name
-                    ]
-                    for i in reversed(exhausted_indices):
-                        tool_dicts.pop(i)
-                    # Remove from functions
-                    if tool_name in functions:
-                        del functions[tool_name]
+        """Remove a specific tool from available tools."""
+        # Remove the tool from tool_dicts
+        exhausted_indices = [
+            i for i, t in enumerate(tool_dicts)
+            if t.get("function", {}).get("name") == tool_name
+        ]
+        for i in reversed(exhausted_indices):
+            tool_dicts.pop(i)
+        # Remove from functions
+        if tool_name in functions:
+            del functions[tool_name]
 
     def response(
         self,
@@ -408,6 +401,9 @@ class Model(ABC):
                     function_call_results=function_call_results,
                     current_function_call_count=function_call_count,
                     function_call_limit=tool_call_limit,
+                    remaining_tool_limits=remaining_tool_limits,
+                    tool_dicts=_tool_dicts,
+                    functions=_functions,
                 ):
                     if isinstance(function_call_response, ModelResponse):
                         # The session state is updated by the function call
@@ -456,15 +452,6 @@ class Model(ABC):
 
                 # Add a function call for each successful execution
                 function_call_count += len(function_call_results)
-
-                # Handle tool usage limits
-                if remaining_tool_limits and function_call_results:
-                    self._remove_exhausted_tools(
-                        remaining_tool_limits=remaining_tool_limits,
-                        function_call_results=function_call_results,
-                        tool_dicts=_tool_dicts,
-                        functions=_functions,
-                    )
 
                 # Format and add results to messages
                 self.format_function_call_results(
@@ -540,14 +527,15 @@ class Model(ABC):
         _log_messages(messages)
         model_response = ModelResponse()
 
-        function_call_count = 0
-
-        # Initialize tool usage limits tracking
-        remaining_tool_limits: Dict[str, int] = tool_usage_limits or {}
-
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
 
+        function_call_count = 0
+        
+        # Initialize tool usage limits tracking
+        remaining_tool_limits: Dict[str, int] = tool_usage_limits or {}
+        
+        
         while True:
             # Get response from model
             assistant_message = Message(role=self.assistant_message_role)
@@ -583,6 +571,9 @@ class Model(ABC):
                     function_call_results=function_call_results,
                     current_function_call_count=function_call_count,
                     function_call_limit=tool_call_limit,
+                    remaining_tool_limits=remaining_tool_limits,
+                    tool_dicts=_tool_dicts,
+                    functions=_functions,
                 ):
                     if isinstance(function_call_response, ModelResponse):
                         # The session state is updated by the function call
@@ -630,15 +621,6 @@ class Model(ABC):
 
                 # Add a function call for each successful execution
                 function_call_count += len(function_call_results)
-
-                # Handle tool usage limits
-                if remaining_tool_limits and function_call_results:
-                    self._remove_exhausted_tools(
-                        remaining_tool_limits=remaining_tool_limits,
-                        function_call_results=function_call_results,
-                        tool_dicts=_tool_dicts,
-                        functions=_functions,
-                    )
 
                 # Format and add results to messages
                 self.format_function_call_results(
@@ -1007,6 +989,9 @@ class Model(ABC):
                     function_call_results=function_call_results,
                     current_function_call_count=function_call_count,
                     function_call_limit=tool_call_limit,
+                    remaining_tool_limits=remaining_tool_limits,
+                    tool_dicts=_tool_dicts,
+                    functions=_functions,
                 ):
                     if self.cache_response and isinstance(function_call_response, ModelResponse):
                         streaming_responses.append(function_call_response)
@@ -1014,15 +999,6 @@ class Model(ABC):
 
                 # Add a function call for each successful execution
                 function_call_count += len(function_call_results)
-
-                # Handle tool usage limits
-                if remaining_tool_limits and function_call_results:
-                    self._remove_exhausted_tools(
-                        remaining_tool_limits=remaining_tool_limits,
-                        function_call_results=function_call_results,
-                        tool_dicts=_tool_dicts,
-                        functions=_functions,
-                    )
 
                 # Format and add results to messages
                 if stream_data and stream_data.extra is not None:
@@ -1218,6 +1194,9 @@ class Model(ABC):
                     function_call_results=function_call_results,
                     current_function_call_count=function_call_count,
                     function_call_limit=tool_call_limit,
+                    remaining_tool_limits=remaining_tool_limits,
+                    tool_dicts=_tool_dicts,
+                    functions=_functions,
                 ):
                     if self.cache_response and isinstance(function_call_response, ModelResponse):
                         streaming_responses.append(function_call_response)
@@ -1225,15 +1204,6 @@ class Model(ABC):
 
                 # Add a function call for each successful execution
                 function_call_count += len(function_call_results)
-
-                # Handle tool usage limits
-                if remaining_tool_limits and function_call_results:
-                    self._remove_exhausted_tools(
-                        remaining_tool_limits=remaining_tool_limits,
-                        function_call_results=function_call_results,
-                        tool_dicts=_tool_dicts,
-                        functions=_functions,
-                    )
 
                 # Format and add results to messages
                 if stream_data and stream_data.extra is not None:
@@ -1463,10 +1433,15 @@ class Model(ABC):
             **kwargs,  # type: ignore
         )
 
-    def create_tool_call_limit_error_result(self, function_call: FunctionCall) -> Message:
+    def create_tool_call_limit_error_result(self, function_call: FunctionCall, is_single_tool_limit: bool = False) -> Message:
+        if is_single_tool_limit:
+            content = f"Tool call limit reached for {function_call.function.name}. Tool call not executed. Don't try to execute it again."
+        else:
+            content = f"Tool call limit reached. Tool call {function_call.function.name} not executed. Don't try to execute it again."
+        
         return Message(
             role=self.tool_message_role,
-            content=f"Tool call limit reached. Tool call {function_call.function.name} not executed. Don't try to execute it again.",
+            content=content,
             tool_call_id=function_call.call_id,
             tool_name=function_call.function.name,
             tool_args=function_call.arguments,
@@ -1605,6 +1580,9 @@ class Model(ABC):
         additional_input: Optional[List[Message]] = None,
         current_function_call_count: int = 0,
         function_call_limit: Optional[int] = None,
+        remaining_tool_limits: Optional[Dict[str, int]] = None,
+        tool_dicts: Optional[List[Dict[str, Any]]] = None,
+        functions: Optional[Dict[str, Function]] = None,
     ) -> Iterator[Union[ModelResponse, RunOutputEvent, TeamRunOutputEvent]]:
         # Additional messages from function calls that will be added to the function call results
         if additional_input is None:
@@ -1615,8 +1593,19 @@ class Model(ABC):
                 current_function_call_count += 1
                 # We have reached the function call limit, so we add an error result to the function call results
                 if current_function_call_count > function_call_limit:
-                    function_call_results.append(self.create_tool_call_limit_error_result(fc))
+                    function_call_results.append(self.create_tool_call_limit_error_result(fc, is_single_tool_limit=False))
                     continue
+
+            # Check if single tool has exceeded its usage limit
+            if remaining_tool_limits and fc.function.name in remaining_tool_limits:
+                if remaining_tool_limits[fc.function.name] <= 0:
+                    function_call_results.append(self.create_tool_call_limit_error_result(fc, is_single_tool_limit=True))
+                    continue
+                # Decrement the limit for this tool
+                remaining_tool_limits[fc.function.name] -= 1
+                # If tool has reached its limit, remove it from available tools
+                if remaining_tool_limits[fc.function.name] <= 0 and tool_dicts is not None and functions is not None:
+                    self._remove_tool_by_name(fc.function.name, tool_dicts, functions)
 
             paused_tool_executions = []
 
@@ -1749,6 +1738,9 @@ class Model(ABC):
         current_function_call_count: int = 0,
         function_call_limit: Optional[int] = None,
         skip_pause_check: bool = False,
+        remaining_tool_limits: Optional[Dict[str, int]] = None,
+        tool_dicts: Optional[List[Dict[str, Any]]] = None,
+        functions: Optional[Dict[str, Function]] = None,
     ) -> AsyncIterator[Union[ModelResponse, RunOutputEvent, TeamRunOutputEvent]]:
         # Additional messages from function calls that will be added to the function call results
         if additional_input is None:
@@ -1760,9 +1752,21 @@ class Model(ABC):
                 current_function_call_count += 1
                 # We have reached the function call limit, so we add an error result to the function call results
                 if current_function_call_count > function_call_limit:
-                    function_call_results.append(self.create_tool_call_limit_error_result(fc))
+                    function_call_results.append(self.create_tool_call_limit_error_result(fc, is_single_tool_limit=False))
                     # Skip this function call
                     continue
+            
+            # Check if single tool has exceeded its usage limit
+            if remaining_tool_limits and fc.function.name in remaining_tool_limits:
+                if remaining_tool_limits[fc.function.name] <= 0:
+                    function_call_results.append(self.create_tool_call_limit_error_result(fc, is_single_tool_limit=True))
+                    continue
+                # Decrement the limit for this tool
+                remaining_tool_limits[fc.function.name] -= 1
+                # If tool has reached its limit, remove it from available tools
+                if remaining_tool_limits[fc.function.name] <= 0 and tool_dicts is not None and functions is not None:
+                    self._remove_tool_by_name(fc.function.name, tool_dicts, functions)
+            
             function_calls_to_run.append(fc)
 
         # Yield tool_call_started events for all function calls or pause them

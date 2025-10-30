@@ -280,7 +280,7 @@ class Agent:
     # Add a tool that allows the Model to search the knowledge base (aka Agentic RAG)
     # Added only if knowledge is provided.
     search_knowledge: bool = True
-    # Usage limit for search_knowledge tool (None = unlimited)
+    # Usage limit for search_knowledge tool per run (None = unlimited)
     search_knowledge_usage_limit: Optional[int] = None
     # Add a tool that allows the Agent to update Knowledge.
     update_knowledge: bool = False
