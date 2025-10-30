@@ -5276,16 +5276,15 @@ class Agent:
 
         # Add tools for accessing memory
         if self.read_chat_history:
-            chat_history_func = self._get_chat_history_function(session=session)
-            agent_tools.append(chat_history_func)
+            agent_tools.append(self._get_chat_history_function(session=session))
         if self.read_tool_call_history:
-            tool_call_history_func = self._get_tool_call_history_function(session=session)
-            agent_tools.append(tool_call_history_func)
+            agent_tools.append(self._get_tool_call_history_function(session=session))
         if self.search_session_history:
-            session_history_func = self._get_previous_sessions_messages_function(
-                num_history_sessions=self.num_history_sessions, user_id=user_id
+            agent_tools.append(
+                self._get_previous_sessions_messages_function(
+                    num_history_sessions=self.num_history_sessions, user_id=user_id
+                )
             )
-            agent_tools.append(session_history_func)
 
         if self.enable_agentic_memory:
             agent_tools.append(self._get_update_user_memory_function(user_id=user_id, async_mode=False))
@@ -5327,8 +5326,7 @@ class Agent:
                     )
 
             if self.update_knowledge:
-                update_knowledge_func = Function.from_callable(self.add_to_knowledge, name="add_to_knowledge")
-                agent_tools.append(update_knowledge_func)
+                agent_tools.append(self.add_to_knowledge)
 
         return agent_tools
 
@@ -5374,16 +5372,15 @@ class Agent:
 
         # Add tools for accessing memory
         if self.read_chat_history:
-            chat_history_func = self._get_chat_history_function(session=session)
-            agent_tools.append(chat_history_func)
+            agent_tools.append(self._get_chat_history_function(session=session))
         if self.read_tool_call_history:
-            tool_call_history_func = self._get_tool_call_history_function(session=session)
-            agent_tools.append(tool_call_history_func)
+            agent_tools.append(self._get_tool_call_history_function(session=session))
         if self.search_session_history:
-            session_history_func = await self._aget_previous_sessions_messages_function(
-                num_history_sessions=self.num_history_sessions, user_id=user_id
+            agent_tools.append(
+                await self._aget_previous_sessions_messages_function(
+                    num_history_sessions=self.num_history_sessions, user_id=user_id
+                )
             )
-            agent_tools.append(session_history_func)
 
         if self.enable_agentic_memory:
             agent_tools.append(self._get_update_user_memory_function(user_id=user_id, async_mode=True))
@@ -5413,8 +5410,7 @@ class Agent:
                     )
 
             if self.update_knowledge:
-                update_knowledge_func = Function.from_callable(self.add_to_knowledge, name="add_to_knowledge")
-                agent_tools.append(update_knowledge_func)
+                agent_tools.append(self.add_to_knowledge)
 
         return agent_tools
 
