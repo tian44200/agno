@@ -1593,7 +1593,7 @@ class Model(ABC):
                 current_function_call_count += 1
                 # We have reached the function call limit, so we add an error result to the function call results
                 if current_function_call_count > function_call_limit:
-                    function_call_results.append(self.create_tool_call_limit_error_result(fc, is_single_tool_limit=False))
+                    function_call_results.append(self.create_tool_call_limit_error_result(fc))
                     continue
 
             # Check if single tool has exceeded its usage limit
@@ -1752,7 +1752,7 @@ class Model(ABC):
                 current_function_call_count += 1
                 # We have reached the function call limit, so we add an error result to the function call results
                 if current_function_call_count > function_call_limit:
-                    function_call_results.append(self.create_tool_call_limit_error_result(fc, is_single_tool_limit=False))
+                    function_call_results.append(self.create_tool_call_limit_error_result(fc))
                     # Skip this function call
                     continue
             
