@@ -300,7 +300,7 @@ class Model(ABC):
                 _tool_dicts.append(tool)
         return _tool_dicts
 
-    def _remove_tool_by_name(
+    def _remove_tool_from_available_tools(
         self,
         tool_name: str,
         tool_dicts: List[Dict[str, Any]],
@@ -887,6 +887,7 @@ class Model(ABC):
         """
         Generate a streaming response from the model.
         """
+        
         # Check cache if enabled - capture key BEFORE streaming to avoid mismatch
         cache_key = None
         if self.cache_response:
@@ -1089,6 +1090,7 @@ class Model(ABC):
         """
         Generate an asynchronous streaming response from the model.
         """
+        
         # Check cache if enabled - capture key BEFORE streaming to avoid mismatch
         cache_key = None
         if self.cache_response:
@@ -1596,7 +1598,7 @@ class Model(ABC):
                 remaining_tool_limits[fc.function.name] -= 1
                 # If tool has reached its limit, remove it from available tools
                 if remaining_tool_limits[fc.function.name] <= 0 and tool_dicts is not None and functions is not None:
-                    self._remove_tool_by_name(fc.function.name, tool_dicts, functions)
+                    self._remove_tool_from_available_tools(fc.function.name, tool_dicts, functions)
 
             paused_tool_executions = []
 
@@ -1757,7 +1759,7 @@ class Model(ABC):
                 remaining_tool_limits[fc.function.name] -= 1
                 # If tool has reached its limit, remove it from available tools
                 if remaining_tool_limits[fc.function.name] <= 0 and tool_dicts is not None and functions is not None:
-                    self._remove_tool_by_name(fc.function.name, tool_dicts, functions)
+                    self._remove_tool_from_available_tools(fc.function.name, tool_dicts, functions)
 
             function_calls_to_run.append(fc)
 
