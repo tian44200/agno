@@ -359,7 +359,6 @@ class Model(ABC):
 
         function_call_count = 0
 
-        # Initialize tool usage limits tracking
         remaining_tool_limits: Dict[str, int] = tool_usage_limits or {}
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
@@ -532,7 +531,6 @@ class Model(ABC):
 
         function_call_count = 0
         
-        # Initialize tool usage limits tracking
         remaining_tool_limits: Dict[str, int] = tool_usage_limits or {}
         
         
@@ -892,7 +890,6 @@ class Model(ABC):
         Generate a streaming response from the model.
         """
 
-        # Initialize tool usage limits tracking
         remaining_tool_limits: Dict[str, int] = tool_usage_limits or {}
 
         # Check cache if enabled - capture key BEFORE streaming to avoid mismatch
@@ -1601,7 +1598,6 @@ class Model(ABC):
                 if remaining_tool_limits[fc.function.name] <= 0:
                     function_call_results.append(self.create_tool_call_limit_error_result(fc, is_single_tool_limit=True))
                     continue
-                # Decrement the limit for this tool
                 remaining_tool_limits[fc.function.name] -= 1
                 # If tool has reached its limit, remove it from available tools
                 if remaining_tool_limits[fc.function.name] <= 0 and tool_dicts is not None and functions is not None:
@@ -1761,7 +1757,6 @@ class Model(ABC):
                 if remaining_tool_limits[fc.function.name] <= 0:
                     function_call_results.append(self.create_tool_call_limit_error_result(fc, is_single_tool_limit=True))
                     continue
-                # Decrement the limit for this tool
                 remaining_tool_limits[fc.function.name] -= 1
                 # If tool has reached its limit, remove it from available tools
                 if remaining_tool_limits[fc.function.name] <= 0 and tool_dicts is not None and functions is not None:
