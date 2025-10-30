@@ -152,6 +152,7 @@ def test_multiple_tools_different_call_limits():
 
 # Tests for search_knowledge_call_limit
 
+
 @pytest_asyncio.fixture
 async def loaded_knowledge_base():
     """Create a knowledge base with sample content."""
