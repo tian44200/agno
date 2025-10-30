@@ -105,7 +105,7 @@ def tool(*args, **kwargs) -> Union[Function, Callable[[F], Function]]:
         cache_results: bool - If True, enable caching of function results
         cache_dir: Optional[str] - Directory to store cache files
         cache_ttl: int - Time-to-live for cached results in seconds
-        call_limit: Optional[int] - Maximum number of times this function can be called in a single run. None means unlimited calls
+        call_limit: Optional[int] - The maximum number of calls allowed during a single run. None means no limit.
 
     Returns:
         Union[Function, Callable[[F], Function]]: Decorated function or decorator

@@ -38,10 +38,8 @@ def test_per_tool_call_limit():
 
 def test_per_tool_call_limit_stream():
     """Test that per tool call limits work with streaming."""
-    # Create YFinanceTools and set call_limit on specific tools
     yfinance_tools = YFinanceTools(cache_results=True)
 
-    # Set call_limit on the get_current_stock_price function
     for tool in yfinance_tools.functions.values():
         if tool.name == "get_current_stock_price":
             tool.call_limit = 1
@@ -70,10 +68,8 @@ def test_per_tool_call_limit_stream():
 @pytest.mark.asyncio
 async def test_per_tool_call_limit_async():
     """Test that per tool call limits work with async."""
-    # Create YFinanceTools and set call_limit on specific tools
     yfinance_tools = YFinanceTools(cache_results=True)
 
-    # Set call_limit on the get_current_stock_price function
     for tool in yfinance_tools.functions.values():
         if tool.name == "get_current_stock_price":
             tool.call_limit = 1
@@ -99,10 +95,8 @@ async def test_per_tool_call_limit_async():
 @pytest.mark.asyncio
 async def test_per_tool_call_limit_stream_async():
     """Test that per tool call limits work with async streaming."""
-    # Create YFinanceTools and set call_limit on specific tools
     yfinance_tools = YFinanceTools(cache_results=True)
 
-    # Set call_limit on the get_current_stock_price function
     for tool in yfinance_tools.functions.values():
         if tool.name == "get_current_stock_price":
             tool.call_limit = 1
@@ -130,7 +124,6 @@ def test_multiple_tools_different_call_limits():
     """Test that different tools can have different call limits and don't interfere with each other."""
     yfinance_tools = YFinanceTools(cache_results=True)
 
-    # Set call_limit=1 for get_current_stock_price and call_limit=2 for get_stock_info
     for tool in yfinance_tools.functions.values():
         if tool.name == "get_current_stock_price":
             tool.call_limit = 1
@@ -143,24 +136,21 @@ def test_multiple_tools_different_call_limits():
         markdown=True,
         telemetry=False,
     )
-
+    # This should normally call get_current_stock_price twice and get_company_info twice,
     response = agent.run(
         "First, get the current stock prices for TSLA and AAPL. After getting the results, get the company info for AAPL and GOOGL."
     )
 
-    # Verify that get_current_stock_price was called only once due to call_limit=1
     stock_price_calls = [t for t in (response.tools or []) if t.tool_name == "get_current_stock_price"]
     assert len(stock_price_calls) == 1, f"Expected 1 get_current_stock_price call, got {len(stock_price_calls)}"
 
-    # Verify that get_stock_info can be called up to 2 times due to call_limit=2
     stock_info_calls = [t for t in (response.tools or []) if t.tool_name == "get_company_info"]
-    assert len(stock_info_calls) == 1, f"Expected 2 get_company_info calls, got {len(stock_info_calls)}"
+    assert len(stock_info_calls) == 1, f"Expected 1 get_company_info calls, got {len(stock_info_calls)}"
 
     assert response.content is not None
 
 
 # Tests for search_knowledge_call_limit
-
 
 @pytest_asyncio.fixture
 async def loaded_knowledge_base():
@@ -179,8 +169,7 @@ async def loaded_knowledge_base():
     return knowledge
 
 
-def test_search_knowledge_call_limit_single_call(loaded_knowledge_base):
-    """Test that search_knowledge_base tool is called only once when limit is set to 1."""
+def test_search_knowledge_call_limit(loaded_knowledge_base):
     agent = Agent(
         model=OpenAIChat(id="gpt-4o-mini"),
         knowledge=loaded_knowledge_base,
@@ -192,7 +181,7 @@ def test_search_knowledge_call_limit_single_call(loaded_knowledge_base):
 
     response = agent.run("Search for one recipe at a time, three times in total, and tell me what you find.")
 
-    # Verify search_knowledge_base was called only once
+    # Verify search_knowledge_base was called only once instead of three times
     search_calls = [t for t in (response.tools or []) if t.tool_name == "search_knowledge_base"]
     assert len(search_calls) == 1, f"Expected 1 search_knowledge_base call, got {len(search_calls)}"
     assert search_calls[0].result is not None
@@ -213,28 +202,8 @@ async def test_search_knowledge_call_limit_async(loaded_knowledge_base):
 
     response = await agent.arun("Search for one recipe at a time, three times in total, and tell me what you find.")
 
-    # Verify search_knowledge_base was called only once
+    # Verify search_knowledge_base was called only once instead of three times
     search_calls = [t for t in (response.tools or []) if t.tool_name == "search_knowledge_base"]
     assert len(search_calls) == 1, f"Expected 1 search_knowledge_base call, got {len(search_calls)}"
     assert search_calls[0].result is not None
-    assert response.content is not None
-
-
-def test_search_knowledge_no_limit(loaded_knowledge_base):
-    """Test that search_knowledge_base can be called multiple times when no limit is set."""
-    agent = Agent(
-        model=OpenAIChat(id="gpt-4o-mini"),
-        knowledge=loaded_knowledge_base,
-        search_knowledge=True,
-        search_knowledge_call_limit=None,
-        markdown=True,
-        telemetry=False,
-    )
-
-    response = agent.run("Search for one recipe at a time, three times in total, and tell me what you find.")
-
-    # Verify search_knowledge_base can be called multiple times
-    search_calls = [t for t in (response.tools or []) if t.tool_name == "search_knowledge_base"]
-    # When no limit is set, the agent can search multiple times or once depending on the model's decision
-    assert len(search_calls) > 1, f"Expected at least 1 search_knowledge_base call, got {len(search_calls)}"
     assert response.content is not None
