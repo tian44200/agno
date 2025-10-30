@@ -117,8 +117,8 @@ class Function(BaseModel):
     cache_dir: Optional[str] = None
     cache_ttl: int = 3600
 
-    # Maximum number of times this function can be called in a single run, None means unlimited usage
-    usage_limit: Optional[int] = None
+    # Maximum number of times this function can be called in a single run, None means unlimited calls
+    call_limit: Optional[int] = None
 
     # --*-- FOR INTERNAL USE ONLY --*--
     # The agent that the function is associated with

@@ -6,12 +6,12 @@ from agno.run.agent import RunEvent
 from agno.tools.yfinance import YFinanceTools
 
 
-def test_tool_usage_limit_single_tool():
+def test_per_tool_call_limit_single_tool():
     yfinance_tools = YFinanceTools(cache_results=True)
 
     for tool in yfinance_tools.functions.values():
         if tool.name == "get_current_stock_price":
-            tool.usage_limit = 1
+            tool.call_limit = 1
             break
 
     agent = Agent(
@@ -23,7 +23,7 @@ def test_tool_usage_limit_single_tool():
 
     response = agent.run("Find me the current price of TSLA and APPL.")
 
-    # Verify that get_current_stock_price was only called once due to usage_limit
+    # Verify that get_current_stock_price was only called once due to per_tool_call_limit
     stock_price_calls = [t for t in response.tools if t.tool_name == "get_current_stock_price"]
     assert len(stock_price_calls) == 1
     assert stock_price_calls[0].tool_args == {"symbol": "TSLA"}
@@ -31,15 +31,15 @@ def test_tool_usage_limit_single_tool():
     assert response.content is not None
 
 
-def test_tool_usage_limit_stream():
-    """Test that tool usage limits work with streaming."""
-    # Create YFinanceTools and set usage_limit on specific tools
+def test_per_tool_call_limit_stream():
+    """Test that per tool call limits work with streaming."""
+    # Create YFinanceTools and set call_limit on specific tools
     yfinance_tools = YFinanceTools(cache_results=True)
 
-    # Set usage_limit on the get_current_stock_price function
+    # Set call_limit on the get_current_stock_price function
     for tool in yfinance_tools.functions.values():
         if tool.name == "get_current_stock_price":
-            tool.usage_limit = 1
+            tool.call_limit = 1
             break
 
     agent = Agent(
@@ -65,15 +65,15 @@ def test_tool_usage_limit_stream():
 
 
 @pytest.mark.asyncio
-async def test_tool_usage_limit_async():
-    """Test that tool usage limits work with async."""
-    # Create YFinanceTools and set usage_limit on specific tools
+async def test_per_tool_call_limit_async():
+    """Test that per tool call limits work with async."""
+    # Create YFinanceTools and set call_limit on specific tools
     yfinance_tools = YFinanceTools(cache_results=True)
 
-    # Set usage_limit on the get_current_stock_price function
+    # Set call_limit on the get_current_stock_price function
     for tool in yfinance_tools.functions.values():
         if tool.name == "get_current_stock_price":
-            tool.usage_limit = 1
+            tool.call_limit = 1
             break
 
     agent = Agent(
@@ -85,7 +85,7 @@ async def test_tool_usage_limit_async():
 
     response = await agent.arun("Find me the current price of TSLA and APPL.")
 
-    # Verify that get_current_stock_price was only called once due to usage_limit
+    # Verify that get_current_stock_price was only called once due to per_tool_call_limit
     stock_price_calls = [t for t in response.tools if t.tool_name == "get_current_stock_price"]
     assert len(stock_price_calls) == 1
     assert stock_price_calls[0].tool_args == {"symbol": "TSLA"}
@@ -94,15 +94,15 @@ async def test_tool_usage_limit_async():
 
 
 @pytest.mark.asyncio
-async def test_tool_usage_limit_stream_async():
-    """Test that tool usage limits work with async streaming."""
-    # Create YFinanceTools and set usage_limit on specific tools
+async def test_per_tool_call_limit_stream_async():
+    """Test that per tool call limits work with async streaming."""
+    # Create YFinanceTools and set call_limit on specific tools
     yfinance_tools = YFinanceTools(cache_results=True)
 
-    # Set usage_limit on the get_current_stock_price function
+    # Set call_limit on the get_current_stock_price function
     for tool in yfinance_tools.functions.values():
         if tool.name == "get_current_stock_price":
-            tool.usage_limit = 1
+            tool.call_limit = 1
             break
 
     agent = Agent(

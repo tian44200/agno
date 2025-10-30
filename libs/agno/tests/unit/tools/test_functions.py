@@ -727,14 +727,14 @@ def test_tool_decorator_with_complex_types():
     assert complex_types_func.parameters["properties"]["param3"]["type"] == "boolean"
     assert "param3" not in complex_types_func.parameters["required"]
 
-def test_tool_decorator_with_usage_limit():
-    """Test @tool decorator with usage_limit parameter."""
-    @tool(usage_limit=3)
+def test_tool_decorator_with_call_limit():
+    """Test @tool decorator with call_limit parameter."""
+    @tool(call_limit=3)
     def limited_func() -> str:
         return "test"
     
     assert isinstance(limited_func, Function)
-    assert limited_func.usage_limit == 3
+    assert limited_func.call_limit == 3
     
-    func = Function(name="test_func", usage_limit=5)
-    assert func.usage_limit == 5
+    func = Function(name="test_func", call_limit=5)
+    assert func.call_limit == 5

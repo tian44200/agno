@@ -5538,8 +5538,8 @@ class Agent:
         tool_limits: Dict[str, int] = {}
 
         for tool in tools:
-            if isinstance(tool, Function) and tool.usage_limit is not None:
-                tool_limits[tool.name] = tool.usage_limit
+            if isinstance(tool, Function) and tool.call_limit is not None:
+                tool_limits[tool.name] = tool.call_limit
 
         return tool_limits
 
@@ -9424,7 +9424,7 @@ class Agent:
 
         search_func = Function.from_callable(search_knowledge_base_function, name="search_knowledge_base")
         if self.search_knowledge_call_limit is not None:
-            search_func.usage_limit = self.search_knowledge_call_limit
+            search_func.call_limit = self.search_knowledge_call_limit
         return search_func
 
     def _search_knowledge_base_with_agentic_filters_function(
@@ -9513,7 +9513,7 @@ class Agent:
             name="search_knowledge_base_with_agentic_filters",
         )
         if self.search_knowledge_call_limit is not None:
-            search_func.usage_limit = self.search_knowledge_call_limit
+            search_func.call_limit = self.search_knowledge_call_limit
         return search_func
 
     def add_to_knowledge(self, query: str, result: str) -> str:
