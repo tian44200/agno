@@ -288,7 +288,8 @@ class BasePDFReader(Reader):
         pdf_content = []
         pdf_images_text = []
         for page in doc_reader.pages:
-            pdf_content.append(page.extract_text())
+            text = page.extract_text() or ""
+            pdf_content.append(text)
             if read_images:
                 pdf_images_text.append(_ocr_reader(page))
 
