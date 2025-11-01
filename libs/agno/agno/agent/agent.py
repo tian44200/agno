@@ -47,6 +47,7 @@ from agno.models.base import Model
 from agno.models.message import Message, MessageReferences
 from agno.models.metrics import Metrics
 from agno.models.response import ModelResponse, ModelResponseEvent, ToolExecution
+from agno.models.utils import get_model
 from agno.reasoning.step import NextAction, ReasoningStep, ReasoningSteps
 from agno.run.agent import (
     RunEvent,
@@ -418,7 +419,7 @@ class Agent:
     def __init__(
         self,
         *,
-        model: Optional[Model] = None,
+        model: Optional[Union[Model, str]] = None,
         name: Optional[str] = None,
         id: Optional[str] = None,
         introduction: Optional[str] = None,
@@ -462,7 +463,7 @@ class Agent:
         pre_hooks: Optional[Union[List[Callable[..., Any]], List[BaseGuardrail]]] = None,
         post_hooks: Optional[Union[List[Callable[..., Any]], List[BaseGuardrail]]] = None,
         reasoning: bool = False,
-        reasoning_model: Optional[Model] = None,
+        reasoning_model: Optional[Union[Model, str]] = None,
         reasoning_agent: Optional[Agent] = None,
         reasoning_min_steps: int = 1,
         reasoning_max_steps: int = 10,
@@ -491,12 +492,12 @@ class Agent:
         retries: int = 0,
         delay_between_retries: int = 1,
         exponential_backoff: bool = False,
-        parser_model: Optional[Model] = None,
+        parser_model: Optional[Union[Model, str]] = None,
         parser_model_prompt: Optional[str] = None,
         input_schema: Optional[Type[BaseModel]] = None,
         output_schema: Optional[Type[BaseModel]] = None,
         parse_response: bool = True,
-        output_model: Optional[Model] = None,
+        output_model: Optional[Union[Model, str]] = None,
         output_model_prompt: Optional[str] = None,
         structured_outputs: Optional[bool] = None,
         use_json_mode: bool = False,
@@ -515,7 +516,7 @@ class Agent:
         debug_level: Literal[1, 2] = 1,
         telemetry: bool = True,
     ):
-        self.model = model
+        self.model = model  # type: ignore[assignment]
         self.name = name
         self.id = id
         self.introduction = introduction
@@ -581,7 +582,7 @@ class Agent:
         self.post_hooks = post_hooks
 
         self.reasoning = reasoning
-        self.reasoning_model = reasoning_model
+        self.reasoning_model = reasoning_model  # type: ignore[assignment]
         self.reasoning_agent = reasoning_agent
         self.reasoning_min_steps = reasoning_min_steps
         self.reasoning_max_steps = reasoning_max_steps
@@ -613,12 +614,12 @@ class Agent:
         self.retries = retries
         self.delay_between_retries = delay_between_retries
         self.exponential_backoff = exponential_backoff
-        self.parser_model = parser_model
+        self.parser_model = parser_model  # type: ignore[assignment]
         self.parser_model_prompt = parser_model_prompt
         self.input_schema = input_schema
         self.output_schema = output_schema
         self.parse_response = parse_response
-        self.output_model = output_model
+        self.output_model = output_model  # type: ignore[assignment]
         self.output_model_prompt = output_model_prompt
 
         self.structured_outputs = structured_outputs
@@ -661,6 +662,8 @@ class Agent:
 
         # Lazy-initialized shared thread pool executor for background tasks (memory, cultural knowledge, etc.)
         self._background_executor: Optional[Any] = None
+
+        self._get_models()
 
     @property
     def background_executor(self) -> Any:
@@ -817,6 +820,16 @@ class Agent:
     def _has_async_db(self) -> bool:
         """Return True if the db the agent is equipped with is an Async implementation"""
         return self.db is not None and isinstance(self.db, AsyncBaseDb)
+
+    def _get_models(self) -> None:
+        if self.model is not None:
+            self.model = get_model(self.model)
+        if self.reasoning_model is not None:
+            self.reasoning_model = get_model(self.reasoning_model)
+        if self.parser_model is not None:
+            self.parser_model = get_model(self.parser_model)
+        if self.output_model is not None:
+            self.output_model = get_model(self.output_model)
 
     def initialize_agent(self, debug_mode: Optional[bool] = None) -> None:
         self._set_default_model()
@@ -1273,6 +1286,7 @@ class Agent:
                     tools=_tools,
                     response_format=response_format,
                     stream_events=stream_events,
+                    session_state=session_state,
                 ):
                     raise_if_cancelled(run_response.run_id)  # type: ignore
                     yield event
@@ -1289,6 +1303,7 @@ class Agent:
                     tools=_tools,
                     response_format=response_format,
                     stream_events=stream_events,
+                    session_state=session_state,
                 ):
                     raise_if_cancelled(run_response.run_id)  # type: ignore
                     if isinstance(event, RunContentEvent):
@@ -1391,6 +1406,11 @@ class Agent:
                         events_to_skip=self.events_to_skip,  # type: ignore
                         store_events=self.store_events,
                     )
+
+            # Update run_response.session_state before creating RunCompletedEvent
+            # This ensures the event has the final state after all tool modifications
+            if session.session_data is not None and "session_state" in session.session_data:
+                run_response.session_state = session.session_data["session_state"]
 
             # Create the run completed event
             completed_event = handle_event(  # type: ignore
@@ -1631,6 +1651,7 @@ class Agent:
             user_id=user_id,
             agent_name=self.name,
             metadata=metadata,
+            session_state=session_state,
             input=run_input,
         )
 
@@ -2154,6 +2175,7 @@ class Agent:
                     tools=_tools,
                     response_format=response_format,
                     stream_events=stream_events,
+                    session_state=session_state,
                 ):
                     raise_if_cancelled(run_response.run_id)  # type: ignore
                     yield event
@@ -2170,6 +2192,7 @@ class Agent:
                     tools=_tools,
                     response_format=response_format,
                     stream_events=stream_events,
+                    session_state=session_state,
                 ):
                     raise_if_cancelled(run_response.run_id)  # type: ignore
                     if isinstance(event, RunContentEvent):
@@ -2275,6 +2298,11 @@ class Agent:
                         events_to_skip=self.events_to_skip,  # type: ignore
                         store_events=self.store_events,
                     )
+
+            # Update run_response.session_state before creating RunCompletedEvent
+            # This ensures the event has the final state after all tool modifications
+            if agent_session.session_data is not None and "session_state" in agent_session.session_data:
+                run_response.session_state = agent_session.session_data["session_state"]
 
             # Create the run completed event
             completed_event = handle_event(
@@ -2515,6 +2543,7 @@ class Agent:
             user_id=user_id,
             agent_name=self.name,
             metadata=metadata,
+            session_state=session_state,
             input=run_input,
         )
 
@@ -3049,6 +3078,7 @@ class Agent:
                 tools=tools,
                 response_format=response_format,
                 stream_events=stream_events,
+                session_state=session_state,
             ):
                 yield event
 
@@ -3116,6 +3146,11 @@ class Agent:
                         events_to_skip=self.events_to_skip,  # type: ignore
                         store_events=self.store_events,
                     )
+
+            # Update run_response.session_state before creating RunCompletedEvent
+            # This ensures the event has the final state after all tool modifications
+            if session.session_data is not None and "session_state" in session.session_data:
+                run_response.session_state = session.session_data["session_state"]
 
             # Create the run completed event
             completed_event = handle_event(
@@ -3787,6 +3822,11 @@ class Agent:
                         events_to_skip=self.events_to_skip,  # type: ignore
                         store_events=self.store_events,
                     )
+
+            # Update run_response.session_state before creating RunCompletedEvent
+            # This ensures the event has the final state after all tool modifications
+            if agent_session.session_data is not None and "session_state" in agent_session.session_data:
+                run_response.session_state = agent_session.session_data["session_state"]
 
             # Create the run completed event
             completed_event = handle_event(
@@ -4659,6 +4699,7 @@ class Agent:
         tools: Optional[List[Union[Function, dict]]] = None,
         response_format: Optional[Union[Dict, Type[BaseModel]]] = None,
         stream_events: bool = False,
+        session_state: Optional[Dict[str, Any]] = None,
     ) -> Iterator[RunOutputEvent]:
         self.model = cast(Model, self.model)
 
@@ -4692,6 +4733,7 @@ class Agent:
                 reasoning_state=reasoning_state,
                 parse_structured_output=self.should_parse_structured_output,
                 stream_events=stream_events,
+                session_state=session_state,
             )
 
         # Determine reasoning completed
@@ -4738,6 +4780,7 @@ class Agent:
         tools: Optional[List[Union[Function, dict]]] = None,
         response_format: Optional[Union[Dict, Type[BaseModel]]] = None,
         stream_events: bool = False,
+        session_state: Optional[Dict[str, Any]] = None,
     ) -> AsyncIterator[RunOutputEvent]:
         self.model = cast(Model, self.model)
 
@@ -4773,6 +4816,7 @@ class Agent:
                 reasoning_state=reasoning_state,
                 parse_structured_output=self.should_parse_structured_output,
                 stream_events=stream_events,
+                session_state=session_state,
             ):
                 yield event
 
@@ -4820,9 +4864,14 @@ class Agent:
         reasoning_state: Optional[Dict[str, Any]] = None,
         parse_structured_output: bool = False,
         stream_events: bool = False,
+        session_state: Optional[Dict[str, Any]] = None,
     ) -> Iterator[RunOutputEvent]:
-        if isinstance(model_response_event, tuple(get_args(RunOutputEvent))) or isinstance(
-            model_response_event, tuple(get_args(TeamRunOutputEvent))
+        from agno.run.workflow import WorkflowRunOutputEvent
+
+        if (
+            isinstance(model_response_event, tuple(get_args(RunOutputEvent)))
+            or isinstance(model_response_event, tuple(get_args(TeamRunOutputEvent)))
+            or isinstance(model_response_event, tuple(get_args(WorkflowRunOutputEvent)))
         ):
             if model_response_event.event == RunEvent.custom_event:  # type: ignore
                 model_response_event.agent_id = self.id  # type: ignore
@@ -5028,11 +5077,15 @@ class Agent:
 
             # If the model response is a tool_call_completed, update the existing tool call in the run_response
             elif model_response_event.event == ModelResponseEvent.tool_call_completed.value:
-                if model_response_event.updated_session_state is not None and session.session_data is not None:
-                    merge_dictionaries(
-                        session.session_data["session_state"],
-                        model_response_event.updated_session_state,
-                    )
+                if model_response_event.updated_session_state is not None:
+                    # update the session_state for RunOutput
+                    if session_state is not None:
+                        merge_dictionaries(session_state, model_response_event.updated_session_state)
+                    # update the DB session
+                    if session.session_data is not None and session.session_data.get("session_state") is not None:
+                        merge_dictionaries(
+                            session.session_data["session_state"], model_response_event.updated_session_state
+                        )
 
                 if model_response_event.images is not None:
                     for image in model_response_event.images:
@@ -8473,7 +8526,7 @@ class Agent:
                         store_events=self.store_events,
                     )
             else:
-                log_warning(
+                log_info(
                     f"Reasoning model: {reasoning_model.__class__.__name__} is not a native reasoning model, defaulting to manual Chain-of-Thought reasoning"
                 )
                 use_default_reasoning = True
@@ -8766,7 +8819,7 @@ class Agent:
                         store_events=self.store_events,
                     )
             else:
-                log_warning(
+                log_info(
                     f"Reasoning model: {reasoning_model.__class__.__name__} is not a native reasoning model, defaulting to manual Chain-of-Thought reasoning"
                 )
                 use_default_reasoning = True
@@ -10035,6 +10088,11 @@ class Agent:
         if run_response.metrics:
             run_response.metrics.stop_timer()
 
+        # Update run_response.session_state from session before saving
+        # This ensures RunOutput reflects all tool modifications
+        if session.session_data is not None and "session_state" in session.session_data:
+            run_response.session_state = session.session_data["session_state"]
+
         # Optional: Save output to file if save_response_to_file is set
         self.save_run_response_to_file(
             run_response=run_response,
@@ -10061,6 +10119,11 @@ class Agent:
         # Stop the timer for the Run duration
         if run_response.metrics:
             run_response.metrics.stop_timer()
+
+        # Update run_response.session_state from session before saving
+        # This ensures RunOutput reflects all tool modifications
+        if session.session_data is not None and "session_state" in session.session_data:
+            run_response.session_state = session.session_data["session_state"]
 
         # Optional: Save output to file if save_response_to_file is set
         self.save_run_response_to_file(

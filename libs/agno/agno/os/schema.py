@@ -23,6 +23,7 @@ from agno.run.agent import RunOutput
 from agno.run.team import TeamRunOutput
 from agno.session import AgentSession, TeamSession, WorkflowSession
 from agno.team.team import Team
+from agno.workflow.agent import WorkflowAgent
 from agno.workflow.workflow import Workflow
 
 
@@ -642,6 +643,7 @@ class WorkflowResponse(BaseModel):
     agent: Optional[AgentResponse] = Field(None, description="Agent configuration if used")
     team: Optional[TeamResponse] = Field(None, description="Team configuration if used")
     metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+    workflow_agent: bool = Field(False, description="Whether this workflow uses a WorkflowAgent")
 
     @classmethod
     async def _resolve_agents_and_teams_recursively(cls, steps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -693,6 +695,7 @@ class WorkflowResponse(BaseModel):
             steps=steps,
             input_schema=get_workflow_input_schema_dict(workflow),
             metadata=workflow.metadata,
+            workflow_agent=isinstance(workflow.agent, WorkflowAgent) if workflow.agent else False,
         )
 
 
@@ -878,6 +881,7 @@ class RunSchema(BaseModel):
     created_at: Optional[datetime] = Field(None, description="Run creation timestamp")
     references: Optional[List[dict]] = Field(None, description="References cited in the run")
     reasoning_messages: Optional[List[dict]] = Field(None, description="Reasoning process messages")
+    session_state: Optional[dict] = Field(None, description="Session state at the end of the run")
     images: Optional[List[dict]] = Field(None, description="Images included in the run")
     videos: Optional[List[dict]] = Field(None, description="Videos included in the run")
     audio: Optional[List[dict]] = Field(None, description="Audio files included in the run")
@@ -905,6 +909,7 @@ class RunSchema(BaseModel):
             events=[event for event in run_dict["events"]] if run_dict.get("events") else None,
             references=run_dict.get("references", []),
             reasoning_messages=run_dict.get("reasoning_messages", []),
+            session_state=run_dict.get("session_state"),
             images=run_dict.get("images", []),
             videos=run_dict.get("videos", []),
             audio=run_dict.get("audio", []),
@@ -933,6 +938,7 @@ class TeamRunSchema(BaseModel):
     created_at: Optional[datetime] = Field(None, description="Run creation timestamp")
     references: Optional[List[dict]] = Field(None, description="References cited in the run")
     reasoning_messages: Optional[List[dict]] = Field(None, description="Reasoning process messages")
+    session_state: Optional[dict] = Field(None, description="Session state at the end of the run")
     input_media: Optional[Dict[str, Any]] = Field(None, description="Input media attachments")
     images: Optional[List[dict]] = Field(None, description="Images included in the run")
     videos: Optional[List[dict]] = Field(None, description="Videos included in the run")
@@ -962,6 +968,7 @@ class TeamRunSchema(BaseModel):
             else None,
             references=run_dict.get("references", []),
             reasoning_messages=run_dict.get("reasoning_messages", []),
+            session_state=run_dict.get("session_state"),
             images=run_dict.get("images", []),
             videos=run_dict.get("videos", []),
             audio=run_dict.get("audio", []),
