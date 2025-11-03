@@ -1612,10 +1612,9 @@ class Model(ABC):
                 # If tool has reached its limit, remove it from available tools
                 if remaining_tool_limits[fc.function.name] <= 0 and tool_dicts is not None and functions is not None:
                     self._remove_tool_from_available_tools(fc.function.name, tool_dicts, functions)
-                    # Add a message to inform the model that this tool has reached its call limit
                     additional_input.append(
                         Message(
-                            role=self.tool_message_role,
+                            role="assistant",
                             content=f"Tool '{fc.function.name}' has reached its call limit and is no longer available.",
                         )
                     )
@@ -1779,10 +1778,9 @@ class Model(ABC):
                 # If tool has reached its limit, remove it from available tools
                 if remaining_tool_limits[fc.function.name] <= 0 and tool_dicts is not None and functions is not None:
                     self._remove_tool_from_available_tools(fc.function.name, tool_dicts, functions)
-                    # Add a message to inform the model that this tool has reached its call limit
                     additional_input.append(
                         Message(
-                            role=self.tool_message_role,
+                            role="assistant",
                             content=f"Tool '{fc.function.name}' has reached its call limit and is no longer available.",
                         )
                     )
