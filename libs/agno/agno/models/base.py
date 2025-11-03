@@ -301,26 +301,6 @@ class Model(ABC):
                 _tool_dicts.append(tool)
         return _tool_dicts
 
-    def _remove_tool_from_available_tools(
-        self,
-        tool_name: str,
-        tool_dicts: List[Dict[str, Any]],
-        functions: Dict[str, Function],
-    ) -> None:
-        """
-        Remove a tool from available tools after reaching call limit.
-
-        Note: tool_dicts and functions are local variables created per run,
-        direct modification ensures the tool won't appear in the LLM's next response.
-        """
-        # Remove the tool from tool_dicts
-        exhausted_indices = [i for i, t in enumerate(tool_dicts) if t.get("function", {}).get("name") == tool_name]
-        for i in reversed(exhausted_indices):
-            tool_dicts.pop(i)
-        # Remove from functions
-        if tool_name in functions:
-            del functions[tool_name]
-
     def response(
         self,
         messages: List[Message],
