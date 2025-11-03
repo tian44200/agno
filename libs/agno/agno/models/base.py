@@ -888,7 +888,7 @@ class Model(ABC):
         """
         Generate a streaming response from the model.
         """
-        
+
         # Check cache if enabled - capture key BEFORE streaming to avoid mismatch
         cache_key = None
         if self.cache_response:
@@ -1091,7 +1091,7 @@ class Model(ABC):
         """
         Generate an asynchronous streaming response from the model.
         """
-        
+
         # Check cache if enabled - capture key BEFORE streaming to avoid mismatch
         cache_key = None
         if self.cache_response:
@@ -1428,7 +1428,7 @@ class Model(ABC):
         self, function_call: FunctionCall, is_single_tool_limit: bool = False
     ) -> Message:
         if is_single_tool_limit:
-            content = f"Call limit reached for {function_call.function.name}. Tool not executed. Don't try to execute this tool again."
+            content = f"Call limit reached for {function_call.function.name}. Don't try to execute this tool again."
         else:
             content = f"Tool call limit reached. Tool call {function_call.function.name} not executed. Don't try to execute it again."
 
@@ -1612,7 +1612,9 @@ class Model(ABC):
                 # If tool has reached its limit, remove it from available tools
                 if remaining_tool_limits[fc.function.name] <= 0 and tool_dicts is not None and functions is not None:
                     self._remove_tool_from_available_tools(fc.function.name, tool_dicts, functions)
-
+                    function_call_results.append(
+                        self.create_tool_call_limit_error_result(fc, is_single_tool_limit=True)
+                    )
             paused_tool_executions = []
 
             # The function cannot be executed without user confirmation
@@ -1773,7 +1775,9 @@ class Model(ABC):
                 # If tool has reached its limit, remove it from available tools
                 if remaining_tool_limits[fc.function.name] <= 0 and tool_dicts is not None and functions is not None:
                     self._remove_tool_from_available_tools(fc.function.name, tool_dicts, functions)
-
+                    function_call_results.append(
+                        self.create_tool_call_limit_error_result(fc, is_single_tool_limit=True)
+                    )
             function_calls_to_run.append(fc)
 
         # Yield tool_call_started events for all function calls or pause them
