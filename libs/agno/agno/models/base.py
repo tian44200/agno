@@ -303,15 +303,14 @@ class Model(ABC):
 
     def _extract_tool_call_limits(self, tools: Optional[List[Union[Function, dict]]]) -> Dict[str, int]:
         """
-        Extract call limits from the provided tools list.
+        Extract the call limits for each tool from the provided list.
 
         Args:
-            tools: List of tools that may have individual call limits.
+            tools: List of tools, each of which may have a single call limit.
 
         Returns:
-            A dictionary mapping tool names to their call limits, or an empty dictionary if no limits are set.
+            A dictionary mapping tool names to their respective call limits, or an empty dictionary if no limits are set.
         """
-
         if not tools:
             return {}
 
