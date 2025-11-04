@@ -360,7 +360,7 @@ class Model(ABC):
         model_response = ModelResponse()
 
         function_call_count = 0
-        remaining_tool_limits: Dict[str, int] = self._extract_tool_call_limits(tools)
+        remaining_tool_limits = self._extract_tool_call_limits(tools)
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
@@ -527,7 +527,7 @@ class Model(ABC):
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
-        remaining_tool_limits: Dict[str, int] = self._extract_tool_call_limits(tools)
+        remaining_tool_limits = self._extract_tool_call_limits(tools)
         function_call_count = 0
 
         while True:
@@ -908,7 +908,7 @@ class Model(ABC):
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
-        remaining_tool_limits: Dict[str, int] = self._extract_tool_call_limits(tools)
+        remaining_tool_limits = self._extract_tool_call_limits(tools)
         function_call_count = 0
 
         while True:
@@ -1108,7 +1108,7 @@ class Model(ABC):
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
-        remaining_tool_limits: Dict[str, int] = self._extract_tool_call_limits(tools)
+        remaining_tool_limits = self._extract_tool_call_limits(tools)
         function_call_count = 0
 
         while True:
