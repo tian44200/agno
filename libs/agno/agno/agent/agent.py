@@ -1904,6 +1904,7 @@ class Agent:
                 per_tool_call_limits=self._build_per_tool_call_limits(_tools) if _tools else None,
                 response_format=response_format,
                 send_media_to_model=self.send_media_to_model,
+                run_response=run_response,
             )
 
             # Check for cancellation after model call
