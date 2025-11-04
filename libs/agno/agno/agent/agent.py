@@ -1049,7 +1049,6 @@ class Agent:
                 tools=_tools,
                 tool_choice=self.tool_choice,
                 tool_call_limit=self.tool_call_limit,
-                per_tool_call_limits=self._build_per_tool_call_limits(_tools) if _tools else None,
                 response_format=response_format,
                 run_response=run_response,
                 send_media_to_model=self.send_media_to_model,
@@ -1901,7 +1900,6 @@ class Agent:
                 tools=_tools,
                 tool_choice=self.tool_choice,
                 tool_call_limit=self.tool_call_limit,
-                per_tool_call_limits=self._build_per_tool_call_limits(_tools) if _tools else None,
                 response_format=response_format,
                 send_media_to_model=self.send_media_to_model,
                 run_response=run_response,
@@ -2953,7 +2951,6 @@ class Agent:
                 tools=tools,
                 tool_choice=self.tool_choice,
                 tool_call_limit=self.tool_call_limit,
-                per_tool_call_limits=self._build_per_tool_call_limits(tools) if tools else None,
             )
 
             # Check for cancellation after model processing
@@ -3505,7 +3502,6 @@ class Agent:
                 tools=_tools,
                 tool_choice=self.tool_choice,
                 tool_call_limit=self.tool_call_limit,
-                per_tool_call_limits=self._build_per_tool_call_limits(_tools) if _tools else None,
             )
             # Check for cancellation after model call
             raise_if_cancelled(run_response.run_id)  # type: ignore
@@ -4721,7 +4717,6 @@ class Agent:
             tools=tools,
             tool_choice=self.tool_choice,
             tool_call_limit=self.tool_call_limit,
-            per_tool_call_limits=self._build_per_tool_call_limits(tools) if tools else None,
             stream_model_response=stream_model_response,
             run_response=run_response,
             send_media_to_model=self.send_media_to_model,
@@ -4802,7 +4797,6 @@ class Agent:
             tools=tools,
             tool_choice=self.tool_choice,
             tool_call_limit=self.tool_call_limit,
-            per_tool_call_limits=self._build_per_tool_call_limits(tools) if tools else None,
             stream_model_response=stream_model_response,
             run_response=run_response,
             send_media_to_model=self.send_media_to_model,
@@ -5587,15 +5581,6 @@ class Agent:
                     func._videos = joint_videos
 
         return _functions
-
-    def _build_per_tool_call_limits(self, tools: List[Union[Function, dict]]) -> Dict[str, int]:
-        tool_limits: Dict[str, int] = {}
-
-        for tool in tools:
-            if isinstance(tool, Function) and tool.call_limit is not None:
-                tool_limits[tool.name] = tool.call_limit
-
-        return tool_limits
 
     def _model_should_return_structured_output(self):
         self.model = cast(Model, self.model)
