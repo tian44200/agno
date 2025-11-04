@@ -136,7 +136,7 @@ def test_multiple_tools_different_call_limits():
     )
     # This should normally call get_current_stock_price twice and get_company_info twice,
     response = agent.run(
-        "First, get the current stock prices for TSLA and AAPL. After getting the results, get the company info for AAPL and GOOGL."
+        "First, fetch the current stock prices for TSLA and AAPL; next, get the company info for AAPL and GOOGL."
     )
 
     stock_price_calls = [t for t in (response.tools or []) if t.tool_name == "get_current_stock_price"]
