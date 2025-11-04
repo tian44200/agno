@@ -66,7 +66,6 @@ def test_per_tool_call_limit_stream():
 
 @pytest.mark.asyncio
 async def test_per_tool_call_limit_async():
-    """Test that per tool call limits work with async."""
     yfinance_tools = YFinanceTools(cache_results=True)
 
     for tool in yfinance_tools.functions.values():
@@ -83,7 +82,7 @@ async def test_per_tool_call_limit_async():
 
     response = await agent.arun("Find me the current price of TSLA and APPL.")
 
-    # Verify that get_current_stock_price was only called once due to per_tool_call_limit
+    # Verify that get_current_stock_price was only called once instead of twice
     stock_price_calls = [t for t in response.tools if t.tool_name == "get_current_stock_price"]
     assert len(stock_price_calls) == 1
     assert stock_price_calls[0].tool_args == {"symbol": "TSLA"}
@@ -134,11 +133,11 @@ def test_multiple_tools_different_call_limits():
         markdown=True,
         telemetry=False,
     )
-    # This should normally call get_current_stock_price twice and get_company_info twice,
+    # This should normally call get_current_stock_price twice and get_company_info twice
     response = agent.run(
         "First, fetch the current stock prices for TSLA and AAPL; next, get the company info for AAPL and GOOGL."
     )
-
+    # Verify that each tool was called only once due to their individual call limits
     stock_price_calls = [t for t in (response.tools or []) if t.tool_name == "get_current_stock_price"]
     assert len(stock_price_calls) == 1, f"Expected 1 get_current_stock_price call, got {len(stock_price_calls)}"
 
