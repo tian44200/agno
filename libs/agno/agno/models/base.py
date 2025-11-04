@@ -304,7 +304,7 @@ class Model(ABC):
     def _extract_tool_call_limits(self, tools: Optional[List[Union[Function, dict]]]) -> Dict[str, int]:
         """
         Extract call limits from the provided tools list.
-        
+
         Args:
             tools: List of tools that may have individual call limits.
 
