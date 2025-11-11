@@ -460,6 +460,7 @@ class Agent:
         metadata: Optional[Dict[str, Any]] = None,
         tools: Optional[Sequence[Union[Toolkit, Callable, Function, Dict]]] = None,
         tool_call_limit: Optional[int] = None,
+        tool_call_limits: Optional[Dict[str, int]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_hooks: Optional[List[Callable]] = None,
         pre_hooks: Optional[List[Union[Callable[..., Any], BaseGuardrail]]] = None,
@@ -471,7 +472,6 @@ class Agent:
         reasoning_max_steps: int = 10,
         read_chat_history: bool = False,
         search_knowledge: bool = True,
-        tool_call_limits: Optional[Dict[str, int]] = None,
         update_knowledge: bool = False,
         read_tool_call_history: bool = False,
         send_media_to_model: bool = True,
@@ -576,6 +576,7 @@ class Agent:
 
         self.tools = list(tools) if tools else []
         self.tool_call_limit = tool_call_limit
+        self.tool_call_limits = tool_call_limits
         self.tool_choice = tool_choice
         self.tool_hooks = tool_hooks
 
@@ -591,7 +592,6 @@ class Agent:
 
         self.read_chat_history = read_chat_history
         self.search_knowledge = search_knowledge
-        self.tool_call_limits = tool_call_limits
         self.update_knowledge = update_knowledge
         self.read_tool_call_history = read_tool_call_history
         self.send_media_to_model = send_media_to_model
