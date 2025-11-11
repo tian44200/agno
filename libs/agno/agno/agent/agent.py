@@ -283,10 +283,10 @@ class Agent:
     # Add a tool that allows the Model to search the knowledge base (aka Agentic RAG)
     # Added only if knowledge is provided.
     search_knowledge: bool = True
-    # Call limit for search_knowledge tool per run. None means no limit.
-    search_knowledge_call_limit: Optional[int] = None
     # Add a tool that allows the Agent to update Knowledge.
     update_knowledge: bool = False
+    # Call limits for individual tools by name. Format: {"tool_name": max_calls}
+    tool_call_limits: Optional[Dict[str, int]] = None
     # Add a tool that allows the Model to get the tool call history.
     read_tool_call_history: bool = False
     # If False, media (images, videos, audio, files) is only available to tools and not sent to the LLM
@@ -471,7 +471,7 @@ class Agent:
         reasoning_max_steps: int = 10,
         read_chat_history: bool = False,
         search_knowledge: bool = True,
-        search_knowledge_call_limit: Optional[int] = None,
+        tool_call_limits: Optional[Dict[str, int]] = None,
         update_knowledge: bool = False,
         read_tool_call_history: bool = False,
         send_media_to_model: bool = True,
@@ -591,7 +591,7 @@ class Agent:
 
         self.read_chat_history = read_chat_history
         self.search_knowledge = search_knowledge
-        self.search_knowledge_call_limit = search_knowledge_call_limit
+        self.tool_call_limits = tool_call_limits
         self.update_knowledge = update_knowledge
         self.read_tool_call_history = read_tool_call_history
         self.send_media_to_model = send_media_to_model
@@ -1042,6 +1042,7 @@ class Agent:
                 tools=_tools,
                 tool_choice=self.tool_choice,
                 tool_call_limit=self.tool_call_limit,
+                tool_call_limits=self.tool_call_limits,
                 response_format=response_format,
                 run_response=run_response,
                 send_media_to_model=self.send_media_to_model,
@@ -1890,6 +1891,7 @@ class Agent:
                 tools=_tools,
                 tool_choice=self.tool_choice,
                 tool_call_limit=self.tool_call_limit,
+                tool_call_limits=self.tool_call_limits,
                 response_format=response_format,
                 send_media_to_model=self.send_media_to_model,
                 run_response=run_response,
@@ -2971,6 +2973,7 @@ class Agent:
                 tools=tools,
                 tool_choice=self.tool_choice,
                 tool_call_limit=self.tool_call_limit,
+                tool_call_limits=self.tool_call_limits,
             )
 
             # Check for cancellation after model processing
@@ -3534,6 +3537,7 @@ class Agent:
                 tools=_tools,
                 tool_choice=self.tool_choice,
                 tool_call_limit=self.tool_call_limit,
+                tool_call_limits=self.tool_call_limits,
             )
             # Check for cancellation after model call
             raise_if_cancelled(run_response.run_id)  # type: ignore
@@ -4739,6 +4743,7 @@ class Agent:
             tools=tools,
             tool_choice=self.tool_choice,
             tool_call_limit=self.tool_call_limit,
+            tool_call_limits=self.tool_call_limits,
             stream_model_response=stream_model_response,
             run_response=run_response,
             send_media_to_model=self.send_media_to_model,
@@ -4819,6 +4824,7 @@ class Agent:
             tools=tools,
             tool_choice=self.tool_choice,
             tool_call_limit=self.tool_call_limit,
+            tool_call_limits=self.tool_call_limits,
             stream_model_response=stream_model_response,
             run_response=run_response,
             send_media_to_model=self.send_media_to_model,
@@ -5768,6 +5774,7 @@ class Agent:
             return self.db.get_session(session_id=session_id, session_type=session_type)  # type: ignore
         except Exception as e:
             import traceback
+
             traceback.print_exc(limit=3)
             log_warning(f"Error getting session from db: {e}")
             return None
@@ -5782,6 +5789,7 @@ class Agent:
             return await self.db.get_session(session_id=session_id, session_type=SessionType.AGENT)  # type: ignore
         except Exception as e:
             import traceback
+
             traceback.print_exc(limit=3)
             log_warning(f"Error getting session from db: {e}")
             return None
@@ -5795,6 +5803,7 @@ class Agent:
             return self.db.upsert_session(session=session)  # type: ignore
         except Exception as e:
             import traceback
+
             traceback.print_exc(limit=3)
             log_warning(f"Error upserting session into db: {e}")
             return None
@@ -5807,6 +5816,7 @@ class Agent:
             return await self.db.upsert_session(session=session)  # type: ignore
         except Exception as e:
             import traceback
+
             traceback.print_exc(limit=3)
             log_warning(f"Error upserting session into db: {e}")
             return None
@@ -8610,6 +8620,7 @@ class Agent:
                     max_steps=self.reasoning_max_steps,
                     tools=self.tools,
                     tool_call_limit=self.tool_call_limit,
+                    tool_call_limits=self.tool_call_limits,
                     use_json_mode=self.use_json_mode,
                     telemetry=self.telemetry,
                     debug_mode=self.debug_mode,
@@ -8903,6 +8914,7 @@ class Agent:
                     max_steps=self.reasoning_max_steps,
                     tools=self.tools,
                     tool_call_limit=self.tool_call_limit,
+                    tool_call_limits=self.tool_call_limits,
                     use_json_mode=self.use_json_mode,
                     telemetry=self.telemetry,
                     debug_mode=self.debug_mode,
@@ -9536,8 +9548,6 @@ class Agent:
             search_knowledge_base_function = search_knowledge_base  # type: ignore
 
         search_func = Function.from_callable(search_knowledge_base_function, name="search_knowledge_base")
-        if self.search_knowledge_call_limit is not None:
-            search_func.call_limit = self.search_knowledge_call_limit
         return search_func
 
     def _search_knowledge_base_with_agentic_filters_function(
@@ -9625,8 +9635,6 @@ class Agent:
             search_knowledge_base_function,
             name="search_knowledge_base_with_agentic_filters",
         )
-        if self.search_knowledge_call_limit is not None:
-            search_func.call_limit = self.search_knowledge_call_limit
         return search_func
 
     def add_to_knowledge(self, query: str, result: str) -> str:

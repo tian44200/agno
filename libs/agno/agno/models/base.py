@@ -303,26 +303,6 @@ class Model(ABC):
                 _tool_dicts.append(tool)
         return _tool_dicts
 
-    def _extract_tool_call_limits(self, tools: Optional[List[Union[Function, dict]]]) -> Dict[str, int]:
-        """
-        Extract the call limits for each tool from the provided tool list.
-
-        Args:
-            tools: List of tools, each of which may have a single call limit.
-
-        Returns:
-            A dictionary mapping tool names to their respective call limits, or an empty dictionary if no limits are set.
-        """
-        if not tools:
-            return {}
-
-        tool_limits: Dict[str, int] = {}
-        for tool in tools:
-            if isinstance(tool, Function) and tool.call_limit is not None:
-                tool_limits[tool.name] = tool.call_limit
-
-        return tool_limits
-
     def response(
         self,
         messages: List[Message],
@@ -330,6 +310,7 @@ class Model(ABC):
         tools: Optional[List[Union[Function, dict]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_call_limit: Optional[int] = None,
+        tool_call_limits: Optional[Dict[str, int]] = None,
         run_response: Optional[Union[RunOutput, TeamRunOutput]] = None,
         send_media_to_model: bool = True,
     ) -> ModelResponse:
@@ -342,6 +323,7 @@ class Model(ABC):
             tools: List of tools to use. This includes the original Function objects and dicts for built-in tools.
             tool_choice: Tool choice to use
             tool_call_limit: Tool call limit
+            tool_call_limits: Individual tool call limits by tool name
             run_response: Run response to use
             send_media_to_model: Whether to send media to the model
         """
@@ -362,7 +344,7 @@ class Model(ABC):
         model_response = ModelResponse()
 
         function_call_count = 0
-        remaining_tool_limits = self._extract_tool_call_limits(tools)
+        remaining_tool_limits = tool_call_limits or {}
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
@@ -506,6 +488,7 @@ class Model(ABC):
         tools: Optional[List[Union[Function, dict]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_call_limit: Optional[int] = None,
+        tool_call_limits: Optional[Dict[str, int]] = None,
         run_response: Optional[Union[RunOutput, TeamRunOutput]] = None,
         send_media_to_model: bool = True,
     ) -> ModelResponse:
@@ -529,7 +512,7 @@ class Model(ABC):
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
-        remaining_tool_limits = self._extract_tool_call_limits(tools)
+        remaining_tool_limits = tool_call_limits or {}
         function_call_count = 0
 
         while True:
@@ -881,6 +864,7 @@ class Model(ABC):
         tools: Optional[List[Union[Function, dict]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_call_limit: Optional[int] = None,
+        tool_call_limits: Optional[Dict[str, int]] = None,
         stream_model_response: bool = True,
         run_response: Optional[Union[RunOutput, TeamRunOutput]] = None,
         send_media_to_model: bool = True,
@@ -913,7 +897,7 @@ class Model(ABC):
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
-        remaining_tool_limits = self._extract_tool_call_limits(tools)
+        remaining_tool_limits = tool_call_limits or {}
         function_call_count = 0
 
         while True:
@@ -1064,6 +1048,7 @@ class Model(ABC):
         tools: Optional[List[Union[Function, dict]]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_call_limit: Optional[int] = None,
+        tool_call_limits: Optional[Dict[str, int]] = None,
         stream_model_response: bool = True,
         run_response: Optional[Union[RunOutput, TeamRunOutput]] = None,
         send_media_to_model: bool = True,
@@ -1096,7 +1081,7 @@ class Model(ABC):
 
         _tool_dicts = self._format_tools(tools) if tools is not None else []
         _functions = {tool.name: tool for tool in tools if isinstance(tool, Function)} if tools is not None else {}
-        remaining_tool_limits = self._extract_tool_call_limits(tools)
+        remaining_tool_limits = tool_call_limits or {}
         function_call_count = 0
 
         while True:

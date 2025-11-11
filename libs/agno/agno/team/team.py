@@ -333,6 +333,8 @@ class Team:
     tool_choice: Optional[Union[str, Dict[str, Any]]] = None
     # Maximum number of tool calls allowed.
     tool_call_limit: Optional[int] = None
+    # Dictionary of tool call limits per tool name
+    tool_call_limits: Optional[Dict[str, int]] = None
     # A list of hooks to be called before and after the tool call
     tool_hooks: Optional[List[Callable]] = None
 
@@ -495,6 +497,7 @@ class Team:
         max_tool_calls_from_history: Optional[int] = None,
         tools: Optional[List[Union[Toolkit, Callable, Function, Dict]]] = None,
         tool_call_limit: Optional[int] = None,
+        tool_call_limits: Optional[Dict[str, int]] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_hooks: Optional[List[Callable]] = None,
         pre_hooks: Optional[List[Union[Callable[..., Any], BaseGuardrail]]] = None,
@@ -613,6 +616,7 @@ class Team:
         self.tools = tools
         self.tool_choice = tool_choice
         self.tool_call_limit = tool_call_limit
+        self.tool_call_limits = tool_call_limits
         self.tool_hooks = tool_hooks
 
         # Initialize hooks with backward compatibility
@@ -1365,6 +1369,7 @@ class Team:
                 tools=_tools,
                 tool_choice=self.tool_choice,
                 tool_call_limit=self.tool_call_limit,
+                tool_call_limits=self.tool_call_limits,
                 send_media_to_model=self.send_media_to_model,
             )
 
@@ -2176,6 +2181,7 @@ class Team:
                 tools=_tools,
                 tool_choice=self.tool_choice,
                 tool_call_limit=self.tool_call_limit,
+                tool_call_limits=self.tool_call_limits,
                 response_format=response_format,
                 send_media_to_model=self.send_media_to_model,
                 run_response=run_response,
@@ -2961,6 +2967,7 @@ class Team:
             tools=tools,
             tool_choice=self.tool_choice,
             tool_call_limit=self.tool_call_limit,
+            tool_call_limits=self.tool_call_limits,
             stream_model_response=stream_model_response,
             send_media_to_model=self.send_media_to_model,
         ):
@@ -3045,6 +3052,7 @@ class Team:
             tools=tools,
             tool_choice=self.tool_choice,
             tool_call_limit=self.tool_call_limit,
+            tool_call_limits=self.tool_call_limits,
             stream_model_response=stream_model_response,
             send_media_to_model=self.send_media_to_model,
             run_response=run_response,
@@ -4482,6 +4490,7 @@ class Team:
                     min_steps=self.reasoning_min_steps,
                     max_steps=self.reasoning_max_steps,
                     tool_call_limit=self.tool_call_limit,
+                    tool_call_limits=self.tool_call_limits,
                     telemetry=self.telemetry,
                     debug_mode=self.debug_mode,
                     debug_level=self.debug_level,
@@ -7520,6 +7529,7 @@ class Team:
             return session  # type: ignore
         except Exception as e:
             import traceback
+
             traceback.print_exc(limit=3)
             log_warning(f"Error getting session from db: {e}")
             return None
@@ -7536,6 +7546,7 @@ class Team:
             return session  # type: ignore
         except Exception as e:
             import traceback
+
             traceback.print_exc(limit=3)
             log_warning(f"Error getting session from db: {e}")
             return None
@@ -7549,6 +7560,7 @@ class Team:
             return self.db.upsert_session(session=session)  # type: ignore
         except Exception as e:
             import traceback
+
             traceback.print_exc(limit=3)
             log_warning(f"Error upserting session into db: {e}")
         return None
@@ -7562,6 +7574,7 @@ class Team:
             return await self.db.upsert_session(session=session)  # type: ignore
         except Exception as e:
             import traceback
+
             traceback.print_exc(limit=3)
             log_warning(f"Error upserting session into db: {e}")
         return None

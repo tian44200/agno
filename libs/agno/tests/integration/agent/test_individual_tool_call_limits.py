@@ -14,14 +14,10 @@ from agno.vectordb.search import SearchType
 def test_per_tool_call_limit():
     yfinance_tools = YFinanceTools(cache_results=True)
 
-    for tool in yfinance_tools.functions.values():
-        if tool.name == "get_current_stock_price":
-            tool.call_limit = 1
-            break
-
     agent = Agent(
         model=OpenAIChat(id="gpt-4o-mini"),
         tools=[yfinance_tools],
+        tool_call_limits={"get_current_stock_price": 1},
         markdown=True,
         telemetry=False,
     )
@@ -39,14 +35,10 @@ def test_per_tool_call_limit():
 def test_per_tool_call_limit_stream():
     yfinance_tools = YFinanceTools(cache_results=True)
 
-    for tool in yfinance_tools.functions.values():
-        if tool.name == "get_current_stock_price":
-            tool.call_limit = 1
-            break
-
     agent = Agent(
         model=OpenAIChat(id="gpt-4o-mini"),
         tools=[yfinance_tools],
+        tool_call_limits={"get_current_stock_price": 1},
         markdown=True,
         telemetry=False,
     )
@@ -68,14 +60,10 @@ def test_per_tool_call_limit_stream():
 async def test_per_tool_call_limit_async():
     yfinance_tools = YFinanceTools(cache_results=True)
 
-    for tool in yfinance_tools.functions.values():
-        if tool.name == "get_current_stock_price":
-            tool.call_limit = 1
-            break
-
     agent = Agent(
         model=OpenAIChat(id="gpt-4o-mini"),
         tools=[yfinance_tools],
+        tool_call_limits={"get_current_stock_price": 1},
         markdown=True,
         telemetry=False,
     )
@@ -94,14 +82,10 @@ async def test_per_tool_call_limit_async():
 async def test_per_tool_call_limit_stream_async():
     yfinance_tools = YFinanceTools(cache_results=True)
 
-    for tool in yfinance_tools.functions.values():
-        if tool.name == "get_current_stock_price":
-            tool.call_limit = 1
-            break
-
     agent = Agent(
         model=OpenAIChat(id="gpt-4o-mini"),
         tools=[yfinance_tools],
+        tool_call_limits={"get_current_stock_price": 1},
         markdown=True,
         telemetry=False,
     )
@@ -121,15 +105,10 @@ def test_multiple_tools_different_call_limits():
     """Test that different tools can have different call limits and don't interfere with each other."""
     yfinance_tools = YFinanceTools(cache_results=True)
 
-    for tool in yfinance_tools.functions.values():
-        if tool.name == "get_current_stock_price":
-            tool.call_limit = 1
-        elif tool.name == "get_company_info":
-            tool.call_limit = 1
-
     agent = Agent(
         model=OpenAIChat(id="gpt-4o-mini"),
         tools=[yfinance_tools],
+        tool_call_limits={"get_current_stock_price": 1, "get_company_info": 1},
         markdown=True,
         telemetry=False,
     )
@@ -172,7 +151,7 @@ def test_search_knowledge_call_limit(loaded_knowledge_base):
         model=OpenAIChat(id="gpt-4o-mini"),
         knowledge=loaded_knowledge_base,
         search_knowledge=True,
-        search_knowledge_call_limit=1,
+        tool_call_limits={"search_knowledge_base": 1},
         markdown=True,
         telemetry=False,
     )
@@ -192,7 +171,7 @@ async def test_search_knowledge_call_limit_async(loaded_knowledge_base):
         model=OpenAIChat(id="gpt-4o-mini"),
         knowledge=loaded_knowledge_base,
         search_knowledge=True,
-        search_knowledge_call_limit=1,
+        tool_call_limits={"search_knowledge_base": 1},
         markdown=True,
         telemetry=False,
     )
