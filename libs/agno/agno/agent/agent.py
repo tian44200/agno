@@ -252,6 +252,8 @@ class Agent:
 
     # Maximum number of tool calls allowed.
     tool_call_limit: Optional[int] = None
+    # Maximum number of calls allowed per tool. Format: {"tool_name": max_calls}
+    tool_call_limits: Optional[Dict[str, int]] = None
     # Controls which (if any) tool is called by the model.
     # "none" means the model will not call a tool and instead generates a message.
     # "auto" means the model can pick between generating a message or calling a tool.
@@ -285,8 +287,6 @@ class Agent:
     search_knowledge: bool = True
     # Add a tool that allows the Agent to update Knowledge.
     update_knowledge: bool = False
-    # Call limits for individual tools by name. Format: {"tool_name": max_calls}
-    tool_call_limits: Optional[Dict[str, int]] = None
     # Add a tool that allows the Model to get the tool call history.
     read_tool_call_history: bool = False
     # If False, media (images, videos, audio, files) is only available to tools and not sent to the LLM

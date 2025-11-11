@@ -333,7 +333,7 @@ class Team:
     tool_choice: Optional[Union[str, Dict[str, Any]]] = None
     # Maximum number of tool calls allowed.
     tool_call_limit: Optional[int] = None
-    # Dictionary of tool call limits per tool name
+    # Maximum number of calls allowed per tool. Format: {"tool_name": max_calls}
     tool_call_limits: Optional[Dict[str, int]] = None
     # A list of hooks to be called before and after the tool call
     tool_hooks: Optional[List[Callable]] = None
