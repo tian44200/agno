@@ -11,7 +11,7 @@ from agno.vectordb.lancedb.lance_db import LanceDb
 from agno.vectordb.search import SearchType
 
 
-def test_per_tool_call_limit():
+def test_tool_call_limits():
     yfinance_tools = YFinanceTools(cache_results=True)
 
     agent = Agent(
@@ -32,7 +32,7 @@ def test_per_tool_call_limit():
     assert response.content is not None
 
 
-def test_per_tool_call_limit_stream():
+def test_tool_call_limits_stream():
     yfinance_tools = YFinanceTools(cache_results=True)
 
     agent = Agent(
@@ -57,7 +57,7 @@ def test_per_tool_call_limit_stream():
 
 
 @pytest.mark.asyncio
-async def test_per_tool_call_limit_async():
+async def test_tool_call_limits_async():
     yfinance_tools = YFinanceTools(cache_results=True)
 
     agent = Agent(
@@ -79,7 +79,7 @@ async def test_per_tool_call_limit_async():
 
 
 @pytest.mark.asyncio
-async def test_per_tool_call_limit_stream_async():
+async def test_tool_call_limits_stream_async():
     yfinance_tools = YFinanceTools(cache_results=True)
 
     agent = Agent(
