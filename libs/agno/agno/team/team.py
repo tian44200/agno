@@ -47,8 +47,8 @@ from agno.models.metrics import Metrics
 from agno.models.response import ModelResponse, ModelResponseEvent
 from agno.models.utils import get_model
 from agno.reasoning.step import NextAction, ReasoningStep, ReasoningSteps
+from agno.run import RunContext, RunStatus
 from agno.run.agent import RunEvent, RunOutput, RunOutputEvent
-from agno.run.base import RunContext, RunStatus
 from agno.run.cancel import (
     cancel_run as cancel_run_global,
 )
@@ -88,7 +88,9 @@ from agno.utils.agent import (
     scrub_media_from_run_output,
     scrub_tool_results_from_run_output,
     set_session_name_util,
+    store_media_util,
     update_session_state_util,
+    validate_media_object_id,
     wait_for_background_tasks,
     wait_for_background_tasks_stream,
 )
@@ -336,9 +338,9 @@ class Team:
 
     # --- Team Hooks ---
     # Functions called right after team session is loaded, before processing starts
-    pre_hooks: Optional[Union[List[Callable[..., Any]], List[BaseGuardrail]]] = None
+    pre_hooks: Optional[List[Union[Callable[..., Any], BaseGuardrail]]] = None
     # Functions called after output is generated but before the response is returned
-    post_hooks: Optional[Union[List[Callable[..., Any]], List[BaseGuardrail]]] = None
+    post_hooks: Optional[List[Union[Callable[..., Any], BaseGuardrail]]] = None
 
     # --- Structured output ---
     # Input schema for validating input
@@ -495,8 +497,8 @@ class Team:
         tool_call_limit: Optional[int] = None,
         tool_choice: Optional[Union[str, Dict[str, Any]]] = None,
         tool_hooks: Optional[List[Callable]] = None,
-        pre_hooks: Optional[Union[List[Callable[..., Any]], List[BaseGuardrail]]] = None,
-        post_hooks: Optional[Union[List[Callable[..., Any]], List[BaseGuardrail]]] = None,
+        pre_hooks: Optional[List[Union[Callable[..., Any], BaseGuardrail]]] = None,
+        post_hooks: Optional[List[Union[Callable[..., Any], BaseGuardrail]]] = None,
         input_schema: Optional[Type[BaseModel]] = None,
         output_schema: Optional[Type[BaseModel]] = None,
         parser_model: Optional[Union[Model, str]] = None,
@@ -800,13 +802,10 @@ class Team:
             member.team_id = self.id
             member.set_id()
 
-            # Inherit team models if agent has no explicit model
-            for model_type in ["model", "reasoning_model", "parser_model", "output_model"]:
-                if getattr(member, model_type) is None and getattr(self, model_type) is not None:
-                    setattr(member, model_type, getattr(self, model_type))
-                    log_info(
-                        f"Agent '{member.name or member.id}' inheriting {model_type} from Team: {getattr(self, model_type).id}"
-                    )
+            # Inherit team primary model if agent has no explicit model
+            if member.model is None and self.model is not None:
+                member.model = self.model
+                log_info(f"Agent '{member.name or member.id}' inheriting model from Team: {self.model.id}")
 
         elif isinstance(member, Team):
             member.parent_team_id = self.id
@@ -1385,7 +1384,7 @@ class Team:
 
             # 8. Store media if enabled
             if self.store_media:
-                self._store_media(run_response, model_response)
+                store_media_util(run_response, model_response)
 
             # 9. Convert response to structured format
             self._convert_response_to_structured_format(run_response=run_response)
@@ -1456,7 +1455,7 @@ class Team:
         add_session_state_to_context: Optional[bool] = None,
         response_format: Optional[Union[Dict, Type[BaseModel]]] = None,
         stream_events: bool = False,
-        yield_run_response: bool = False,
+        yield_run_output: bool = False,
         debug_mode: Optional[bool] = None,
         **kwargs: Any,
     ) -> Iterator[Union[TeamRunOutputEvent, RunOutputEvent, TeamRunOutput]]:
@@ -1699,7 +1698,7 @@ class Team:
             if stream_events:
                 yield completed_event
 
-            if yield_run_response:
+            if yield_run_output:
                 yield run_response
 
             # Log Team Telemetry
@@ -1763,6 +1762,7 @@ class Team:
         stream_intermediate_steps: Optional[bool] = None,
         session_id: Optional[str] = None,
         session_state: Optional[Dict[str, Any]] = None,
+        run_context: Optional[RunContext] = None,
         user_id: Optional[str] = None,
         retries: Optional[int] = None,
         audio: Optional[Sequence[Audio]] = None,
@@ -1776,7 +1776,8 @@ class Team:
         dependencies: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         debug_mode: Optional[bool] = None,
-        yield_run_response: bool = False,
+        yield_run_response: bool = False,  # To be deprecated: use yield_run_output instead
+        yield_run_output: bool = False,
         **kwargs: Any,
     ) -> Iterator[Union[RunOutputEvent, TeamRunOutputEvent]]: ...
 
@@ -1789,6 +1790,7 @@ class Team:
         stream_intermediate_steps: Optional[bool] = None,
         session_id: Optional[str] = None,
         session_state: Optional[Dict[str, Any]] = None,
+        run_context: Optional[RunContext] = None,
         user_id: Optional[str] = None,
         retries: Optional[int] = None,
         audio: Optional[Sequence[Audio]] = None,
@@ -1802,7 +1804,8 @@ class Team:
         dependencies: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         debug_mode: Optional[bool] = None,
-        yield_run_response: bool = False,
+        yield_run_response: bool = False,  # To be deprecated: use yield_run_output instead
+        yield_run_output: bool = False,
         **kwargs: Any,
     ) -> Union[TeamRunOutput, Iterator[Union[RunOutputEvent, TeamRunOutputEvent]]]:
         """Run the Team and return the response."""
@@ -1826,14 +1829,14 @@ class Team:
         # Normalise hook & guardails
         if not self._hooks_normalised:
             if self.pre_hooks:
-                self.pre_hooks = normalize_hooks(self.pre_hooks)
+                self.pre_hooks = normalize_hooks(self.pre_hooks)  # type: ignore
             if self.post_hooks:
-                self.post_hooks = normalize_hooks(self.post_hooks)
+                self.post_hooks = normalize_hooks(self.post_hooks)  # type: ignore
             self._hooks_normalised = True
 
         session_id, user_id = self._initialize_session(session_id=session_id, user_id=user_id)
 
-        image_artifacts, video_artifacts, audio_artifacts, file_artifacts = self._validate_media_object_id(
+        image_artifacts, video_artifacts, audio_artifacts, file_artifacts = validate_media_object_id(
             images=images, videos=videos, audios=audio, files=files
         )
 
@@ -1861,7 +1864,7 @@ class Team:
         dependencies = dependencies if dependencies is not None else self.dependencies
 
         # Initialize run context
-        run_context = RunContext(
+        run_context = run_context or RunContext(
             run_id=run_id,
             session_id=session_id,
             user_id=user_id,
@@ -1917,6 +1920,9 @@ class Team:
             else:
                 merge_dictionaries(metadata, self.metadata)
 
+        if metadata:
+            run_context.metadata = metadata
+
         # Create a new run_response for this attempt
         run_response = TeamRunOutput(
             run_id=run_id,
@@ -1943,6 +1949,8 @@ class Team:
         last_exception = None
         num_attempts = retries + 1
 
+        yield_run_output = yield_run_output or yield_run_response  # For backwards compatibility
+
         for attempt in range(num_attempts):
             # Initialize the current run
 
@@ -1959,7 +1967,7 @@ class Team:
                         add_session_state_to_context=add_session_state,
                         response_format=response_format,
                         stream_events=stream_events,
-                        yield_run_response=yield_run_response,
+                        yield_run_output=yield_run_output,
                         debug_mode=debug_mode,
                         **kwargs,
                     )
@@ -2189,7 +2197,7 @@ class Team:
 
             # 10. Store media if enabled
             if self.store_media:
-                self._store_media(run_response, model_response)
+                store_media_util(run_response, model_response)
 
             # 11. Convert response to structured format
             self._convert_response_to_structured_format(run_response=run_response)
@@ -2265,7 +2273,7 @@ class Team:
         response_format: Optional[Union[Dict, Type[BaseModel]]] = None,
         stream_events: bool = False,
         stream_intermediate_steps: bool = False,
-        yield_run_response: bool = False,
+        yield_run_output: bool = False,
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
         add_history_to_context: Optional[bool] = None,
@@ -2540,7 +2548,7 @@ class Team:
             if stream_events:
                 yield completed_event
 
-            if yield_run_response:
+            if yield_run_output:
                 yield run_response
 
             # Log Team Telemetry
@@ -2587,6 +2595,7 @@ class Team:
         stream_intermediate_steps: Optional[bool] = None,
         session_id: Optional[str] = None,
         session_state: Optional[Dict[str, Any]] = None,
+        run_context: Optional[RunContext] = None,
         user_id: Optional[str] = None,
         retries: Optional[int] = None,
         audio: Optional[Sequence[Audio]] = None,
@@ -2613,6 +2622,7 @@ class Team:
         stream_intermediate_steps: Optional[bool] = None,
         session_id: Optional[str] = None,
         session_state: Optional[Dict[str, Any]] = None,
+        run_context: Optional[RunContext] = None,
         user_id: Optional[str] = None,
         retries: Optional[int] = None,
         audio: Optional[Sequence[Audio]] = None,
@@ -2626,7 +2636,8 @@ class Team:
         dependencies: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         debug_mode: Optional[bool] = None,
-        yield_run_response: bool = False,
+        yield_run_response: bool = False,  # To be deprecated: use yield_run_output instead
+        yield_run_output: bool = False,
         **kwargs: Any,
     ) -> AsyncIterator[Union[RunOutputEvent, TeamRunOutputEvent]]: ...
 
@@ -2639,6 +2650,7 @@ class Team:
         stream_intermediate_steps: Optional[bool] = None,
         session_id: Optional[str] = None,
         session_state: Optional[Dict[str, Any]] = None,
+        run_context: Optional[RunContext] = None,
         user_id: Optional[str] = None,
         retries: Optional[int] = None,
         audio: Optional[Sequence[Audio]] = None,
@@ -2652,7 +2664,8 @@ class Team:
         dependencies: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         debug_mode: Optional[bool] = None,
-        yield_run_response: bool = False,
+        yield_run_response: bool = False,  # To be deprecated: use yield_run_output instead
+        yield_run_output: bool = False,
         **kwargs: Any,
     ) -> Union[TeamRunOutput, AsyncIterator[Union[RunOutputEvent, TeamRunOutputEvent]]]:
         """Run the Team asynchronously and return the response."""
@@ -2671,9 +2684,9 @@ class Team:
         # Normalise hook & guardails
         if not self._hooks_normalised:
             if self.pre_hooks:
-                self.pre_hooks = normalize_hooks(self.pre_hooks, async_mode=True)
+                self.pre_hooks = normalize_hooks(self.pre_hooks, async_mode=True)  # type: ignore
             if self.post_hooks:
-                self.post_hooks = normalize_hooks(self.post_hooks, async_mode=True)
+                self.post_hooks = normalize_hooks(self.post_hooks, async_mode=True)  # type: ignore
             self._hooks_normalised = True
 
         session_id, user_id = self._initialize_session(session_id=session_id, user_id=user_id)
@@ -2681,7 +2694,7 @@ class Team:
         # Initialize Team
         self.initialize_team(debug_mode=debug_mode)
 
-        image_artifacts, video_artifacts, audio_artifacts, file_artifacts = self._validate_media_object_id(
+        image_artifacts, video_artifacts, audio_artifacts, file_artifacts = validate_media_object_id(
             images=images, videos=videos, audios=audio, files=files
         )
 
@@ -2742,13 +2755,14 @@ class Team:
             effective_filters = self._get_effective_filters(knowledge_filters)
 
         # Initialize run context
-        run_context = RunContext(
+        run_context = run_context or RunContext(
             run_id=run_id,
             session_id=session_id,
             user_id=user_id,
             session_state=session_state,
             dependencies=dependencies,
             knowledge_filters=effective_filters,
+            metadata=metadata,
         )
 
         # Create a new run_response for this attempt
@@ -2777,6 +2791,8 @@ class Team:
         last_exception = None
         num_attempts = retries + 1
 
+        yield_run_output = yield_run_output or yield_run_response  # For backwards compatibility
+
         for attempt in range(num_attempts):
             # Run the team
             try:
@@ -2792,7 +2808,7 @@ class Team:
                         add_session_state_to_context=add_session_state,
                         response_format=response_format,
                         stream_events=stream_events,
-                        yield_run_response=yield_run_response,
+                        yield_run_output=yield_run_output,
                         debug_mode=debug_mode,
                         **kwargs,
                     )
@@ -2853,25 +2869,6 @@ class Team:
                 return async_generator_wrapper(create_team_run_error_event(run_response, error=str(last_exception)))
 
             raise Exception(f"Failed after {num_attempts} attempts.")
-
-    def _store_media(self, run_response: TeamRunOutput, model_response: ModelResponse):
-        """Store media from model response in run_response for persistence"""
-        # Handle generated media fields from ModelResponse (generated media)
-        if model_response.images is not None:
-            for image in model_response.images:
-                self._add_image(image, run_response)  # Generated images go to run_response.images
-
-        if model_response.videos is not None:
-            for video in model_response.videos:
-                self._add_video(video, run_response)  # Generated videos go to run_response.videos
-
-        if model_response.audios is not None:
-            for audio in model_response.audios:
-                self._add_audio(audio, run_response)  # Generated audio go to run_response.audio
-
-        if model_response.files is not None:
-            for file in model_response.files:
-                self._add_file(file, run_response)  # Generated files go to run_response.files
 
     def _update_run_response(
         self, model_response: ModelResponse, run_response: TeamRunOutput, run_messages: RunMessages
@@ -3236,7 +3233,9 @@ class Team:
 
                 if model_response_event.images is not None:
                     for image in model_response_event.images:
-                        self._add_image(image, run_response)
+                        if run_response.images is None:
+                            run_response.images = []
+                        run_response.images.append(image)
 
                     should_yield = True
 
@@ -3306,15 +3305,27 @@ class Team:
 
                 if model_response_event.images is not None:
                     for image in model_response_event.images:
-                        self._add_image(image, run_response)
+                        if run_response.images is None:
+                            run_response.images = []
+                        run_response.images.append(image)
 
                 if model_response_event.videos is not None:
                     for video in model_response_event.videos:
-                        self._add_video(video, run_response)
+                        if run_response.videos is None:
+                            run_response.videos = []
+                        run_response.videos.append(video)
 
                 if model_response_event.audios is not None:
                     for audio in model_response_event.audios:
-                        self._add_audio(audio, run_response)
+                        if run_response.audio is None:
+                            run_response.audio = []
+                        run_response.audio.append(audio)
+
+                if model_response_event.files is not None:
+                    for file_obj in model_response_event.files:
+                        if run_response.files is None:
+                            run_response.files = []
+                        run_response.files.append(file_obj)
 
                 reasoning_step: Optional[ReasoningStep] = None
                 tool_executions_list = model_response_event.tool_executions
@@ -4122,55 +4133,6 @@ class Team:
             # If this is a nested team, recursively scrub its member responses
             if isinstance(member_response, TeamRunOutput) and member_response.member_responses:
                 member._scrub_member_responses(member_response.member_responses)  # type: ignore
-
-    def _validate_media_object_id(
-        self,
-        images: Optional[Sequence[Image]] = None,
-        videos: Optional[Sequence[Video]] = None,
-        audios: Optional[Sequence[Audio]] = None,
-        files: Optional[Sequence[File]] = None,
-    ) -> tuple:
-        image_list = None
-        if images:
-            image_list = []
-            for img in images:
-                if not img.id:
-                    from uuid import uuid4
-
-                    img.id = str(uuid4())
-                image_list.append(img)
-
-        video_list = None
-        if videos:
-            video_list = []
-            for vid in videos:
-                if not vid.id:
-                    from uuid import uuid4
-
-                    vid.id = str(uuid4())
-                video_list.append(vid)
-
-        audio_list = None
-        if audios:
-            audio_list = []
-            for aud in audios:
-                if not aud.id:
-                    from uuid import uuid4
-
-                    aud.id = str(uuid4())
-                audio_list.append(aud)
-
-        file_list = None
-        if files:
-            file_list = []
-            for file in files:
-                if not file.id:
-                    from uuid import uuid4
-
-                    file.id = str(uuid4())
-                file_list.append(file)
-
-        return image_list, video_list, audio_list, file_list
 
     def cli_app(
         self,
@@ -5249,18 +5211,29 @@ class Team:
         self,
         session: TeamSession,
         run_context: Optional[RunContext] = None,
-        session_state: Optional[Dict[str, Any]] = None,
         user_id: Optional[str] = None,
         audio: Optional[Sequence[Audio]] = None,
         images: Optional[Sequence[Image]] = None,
         videos: Optional[Sequence[Video]] = None,
         files: Optional[Sequence[File]] = None,
-        dependencies: Optional[Dict[str, Any]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
         tools: Optional[List[Union[Function, dict]]] = None,
         add_session_state_to_context: Optional[bool] = None,
+        session_state: Optional[Dict[str, Any]] = None,  # Deprecated
+        dependencies: Optional[Dict[str, Any]] = None,  # Deprecated
+        metadata: Optional[Dict[str, Any]] = None,  # Deprecated
     ) -> Optional[Message]:
-        """Get the system message for the team."""
+        """Get the system message for the team.
+
+        1. If the system_message is provided, use that.
+        2. If build_context is False, return None.
+        3. Build and return the default system message for the Team.
+        """
+
+        # Consider both run_context and session_state, dependencies, metadata (deprecated fields)
+        if run_context is not None:
+            session_state = run_context.session_state or session_state
+            dependencies = run_context.dependencies or dependencies
+            metadata = run_context.metadata or metadata
 
         # 1. If the system_message is provided, use that.
         if self.system_message is not None:
@@ -5544,16 +5517,16 @@ class Team:
         self,
         session: TeamSession,
         run_context: Optional[RunContext] = None,
-        session_state: Optional[Dict[str, Any]] = None,
         user_id: Optional[str] = None,
         audio: Optional[Sequence[Audio]] = None,
         images: Optional[Sequence[Image]] = None,
         videos: Optional[Sequence[Video]] = None,
         files: Optional[Sequence[File]] = None,
-        dependencies: Optional[Dict[str, Any]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
         tools: Optional[List[Union[Function, dict]]] = None,
         add_session_state_to_context: Optional[bool] = None,
+        session_state: Optional[Dict[str, Any]] = None,  # Deprecated
+        dependencies: Optional[Dict[str, Any]] = None,  # Deprecated
+        metadata: Optional[Dict[str, Any]] = None,  # Deprecated
     ) -> Optional[Message]:
         """Get the system message for the team."""
 
@@ -5656,7 +5629,7 @@ class Team:
             additional_information.append(f"Your name is: {self.name}.")
 
         if self.knowledge is not None and self.enable_agentic_knowledge_filters:
-            valid_filters = getattr(self.knowledge, "valid_metadata_filters", None)
+            valid_filters = await self.knowledge.aget_valid_filters()
             if valid_filters:
                 valid_filters_str = ", ".join(valid_filters)
                 additional_information.append(
@@ -5832,8 +5805,8 @@ class Team:
                 f"<additional_context>\n{self.additional_context.strip()}\n</additional_context>\n\n"
             )
 
-        if self.add_session_state_to_context:
-            system_message_content += f"<session_state>\n{session_state}\n</session_state>\n\n"
+        if add_session_state_to_context and session_state is not None:
+            system_message_content += self._get_formatted_session_state_for_system_message(session_state)
 
         # Add the JSON output prompt if output_schema is provided and structured_outputs is False
         if (
@@ -5986,20 +5959,17 @@ class Team:
         self,
         *,
         run_response: TeamRunOutput,
+        run_context: RunContext,
         session: TeamSession,
-        session_state: Optional[Dict[str, Any]] = None,
         user_id: Optional[str] = None,
         input_message: Optional[Union[str, List, Dict, Message, BaseModel, List[Message]]] = None,
         audio: Optional[Sequence[Audio]] = None,
         images: Optional[Sequence[Image]] = None,
         videos: Optional[Sequence[Video]] = None,
         files: Optional[Sequence[File]] = None,
-        knowledge_filters: Optional[Dict[str, Any]] = None,
         add_history_to_context: Optional[bool] = None,
-        dependencies: Optional[Dict[str, Any]] = None,
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
-        metadata: Optional[Dict[str, Any]] = None,
         tools: Optional[List[Union[Function, dict]]] = None,
         **kwargs: Any,
     ) -> RunMessages:
@@ -6022,14 +5992,12 @@ class Team:
         # 1. Add system message to run_messages
         system_message = await self.aget_system_message(
             session=session,
-            session_state=session_state,
+            run_context=run_context,
             user_id=user_id,
             images=images,
             audio=audio,
             videos=videos,
             files=files,
-            dependencies=dependencies,
-            metadata=metadata,
             add_session_state_to_context=add_session_state_to_context,
             tools=tools,
         )
@@ -6102,17 +6070,14 @@ class Team:
         # 5.1 Build user message if message is None, str or list
         user_message = self._get_user_message(
             run_response=run_response,
-            session_state=session_state,
+            run_context=run_context,
             input_message=input_message,
             user_id=user_id,
             audio=audio,
             images=images,
             videos=videos,
             files=files,
-            knowledge_filters=knowledge_filters,
-            dependencies=dependencies,
             add_dependencies_to_context=add_dependencies_to_context,
-            metadata=metadata,
             **kwargs,
         )
         # Add user message to run_messages
@@ -7033,7 +6998,7 @@ class Team:
                     knowledge_filters=run_context.knowledge_filters
                     if not member_agent.knowledge_filters and member_agent.knowledge
                     else None,
-                    yield_run_response=True,
+                    yield_run_output=True,
                 )
                 member_agent_run_response = None
                 for member_agent_run_output_event in member_agent_run_response_stream:
@@ -7163,7 +7128,7 @@ class Team:
                     knowledge_filters=run_context.knowledge_filters
                     if not member_agent.knowledge_filters and member_agent.knowledge
                     else None,
-                    yield_run_response=True,
+                    yield_run_output=True,
                 )
                 member_agent_run_response = None
                 async for member_agent_run_response_event in member_agent_run_response_stream:
@@ -7279,7 +7244,7 @@ class Team:
                         add_dependencies_to_context=add_dependencies_to_context,
                         add_session_state_to_context=add_session_state_to_context,
                         metadata=run_context.metadata,
-                        yield_run_response=True,
+                        yield_run_output=True,
                     )
                     member_agent_run_response = None
                     for member_agent_run_response_chunk in member_agent_run_response_stream:
@@ -7395,7 +7360,7 @@ class Team:
                         add_dependencies_to_context=add_dependencies_to_context,
                         add_session_state_to_context=add_session_state_to_context,
                         metadata=run_context.metadata,
-                        yield_run_response=True,
+                        yield_run_output=True,
                     )
                     member_agent_run_response = None
                     try:
@@ -7554,6 +7519,8 @@ class Team:
             session = self.db.get_session(session_id=session_id, session_type=session_type)
             return session  # type: ignore
         except Exception as e:
+            import traceback
+            traceback.print_exc(limit=3)
             log_warning(f"Error getting session from db: {e}")
             return None
 
@@ -7568,6 +7535,8 @@ class Team:
             session = await self.db.get_session(session_id=session_id, session_type=session_type)
             return session  # type: ignore
         except Exception as e:
+            import traceback
+            traceback.print_exc(limit=3)
             log_warning(f"Error getting session from db: {e}")
             return None
 
@@ -7579,6 +7548,8 @@ class Team:
                 raise ValueError("Db not initialized")
             return self.db.upsert_session(session=session)  # type: ignore
         except Exception as e:
+            import traceback
+            traceback.print_exc(limit=3)
             log_warning(f"Error upserting session into db: {e}")
         return None
 
@@ -7590,6 +7561,8 @@ class Team:
                 raise ValueError("Db not initialized")
             return await self.db.upsert_session(session=session)  # type: ignore
         except Exception as e:
+            import traceback
+            traceback.print_exc(limit=3)
             log_warning(f"Error upserting session into db: {e}")
         return None
 
@@ -8286,36 +8259,8 @@ class Team:
         return await self.memory_manager.aget_user_memories(user_id=user_id)
 
     ###########################################################################
-    # Handle images, videos and audio
+    # Handle reasoning content
     ###########################################################################
-
-    def _add_image(self, image: Image, run_response: TeamRunOutput) -> None:
-        """Add an image to both the agent's stateful storage and the current run response"""
-        # Add to run response
-        if run_response.images is None:
-            run_response.images = []
-        run_response.images.append(image)
-
-    def _add_video(self, video: Video, run_response: TeamRunOutput) -> None:
-        """Add a video to both the agent's stateful storage and the current run response"""
-        # Add to run response
-        if run_response.videos is None:
-            run_response.videos = []
-        run_response.videos.append(video)
-
-    def _add_audio(self, audio: Audio, run_response: TeamRunOutput) -> None:
-        """Add audio to both the agent's stateful storage and the current run response"""
-        # Add to run response
-        if run_response.audio is None:
-            run_response.audio = []
-        run_response.audio.append(audio)
-
-    def _add_file(self, file: File, run_response: TeamRunOutput) -> None:
-        """Add file to both the agent's stateful storage and the current run response"""
-        # Add to run response
-        if run_response.files is None:
-            run_response.files = []
-        run_response.files.append(file)
 
     def _update_reasoning_content_from_tool_call(
         self, run_response: TeamRunOutput, tool_name: str, tool_args: Dict[str, Any]
@@ -8512,7 +8457,7 @@ class Team:
 
         # Validate the filters against known valid filter keys
         if self.knowledge is not None:
-            valid_filters, invalid_keys = self.knowledge.validate_filters(filters)  # type: ignore
+            valid_filters, invalid_keys = await self.knowledge.async_validate_filters(filters)  # type: ignore
 
             # Warn about invalid filter keys
             if invalid_keys:
