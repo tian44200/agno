@@ -45,3 +45,33 @@ agent_with_custom.print_response(
     "Format apple and pear to uppercase, then reverse the string banana and cherry.",
     stream=True,
 )
+
+# Example 3: Using tool_call_limits with Knowledge (default tools)
+from agno.knowledge.knowledge import Knowledge
+from agno.vectordb.lancedb import LanceDb
+
+knowledge = Knowledge(
+    vector_db=LanceDb(
+        uri="tmp/lancedb",
+        table_name="knowledge",
+    ),
+)
+
+knowledge.add_content(
+    text="Python is a programming language. JavaScript is used for web development.",
+)
+
+agent_with_knowledge = Agent(
+    model=Claude(id="claude-3-5-haiku-20241022"),
+    knowledge=knowledge,
+    search_knowledge=True,
+    tool_call_limits={
+        "search_knowledge_base": 1,
+    },
+)
+# It should only call the search_knowledge_base tool once.
+agent_with_knowledge.print_response(
+    "What is Python and JavaScript?",
+    stream=True,
+)
+
