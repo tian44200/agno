@@ -5774,6 +5774,7 @@ class Agent:
             return self.db.get_session(session_id=session_id, session_type=session_type)  # type: ignore
         except Exception as e:
             import traceback
+
             traceback.print_exc(limit=3)
             log_warning(f"Error getting session from db: {e}")
             return None
@@ -5788,6 +5789,7 @@ class Agent:
             return await self.db.get_session(session_id=session_id, session_type=SessionType.AGENT)  # type: ignore
         except Exception as e:
             import traceback
+
             traceback.print_exc(limit=3)
             log_warning(f"Error getting session from db: {e}")
             return None
@@ -5801,6 +5803,7 @@ class Agent:
             return self.db.upsert_session(session=session)  # type: ignore
         except Exception as e:
             import traceback
+
             traceback.print_exc(limit=3)
             log_warning(f"Error upserting session into db: {e}")
             return None
@@ -5813,6 +5816,7 @@ class Agent:
             return await self.db.upsert_session(session=session)  # type: ignore
         except Exception as e:
             import traceback
+
             traceback.print_exc(limit=3)
             log_warning(f"Error upserting session into db: {e}")
             return None
@@ -9543,8 +9547,7 @@ class Agent:
         else:
             search_knowledge_base_function = search_knowledge_base  # type: ignore
 
-        search_func = Function.from_callable(search_knowledge_base_function, name="search_knowledge_base")
-        return search_func
+        return Function.from_callable(search_knowledge_base_function, name="search_knowledge_base")
 
     def _search_knowledge_base_with_agentic_filters_function(
         self,
@@ -9627,11 +9630,10 @@ class Agent:
         else:
             search_knowledge_base_function = search_knowledge_base  # type: ignore
 
-        search_func = Function.from_callable(
+        return Function.from_callable(
             search_knowledge_base_function,
             name="search_knowledge_base_with_agentic_filters",
         )
-        return search_func
 
     def add_to_knowledge(self, query: str, result: str) -> str:
         """Use this function to add information to the knowledge base for future use.
